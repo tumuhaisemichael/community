@@ -1,0 +1,30 @@
+# OS/editor
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Flutter/Dart generated
+.dart_tool/
+.packages
+.pub/
+build/
+
+# Android generated/cache
+android/.gradle/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+
+# iOS/macOS generated
+**/Pods/
+**/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Misc generated artifacts
+*.log
+*.tmp
+*.cache
