@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:community/screens/report_incident_screen.dart';
+import 'package:intl/intl.dart';
 
 import '../models/community_post.dart';
 import '../repositories/post_repository.dart';
@@ -27,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   LatLng? _currentLocation;
   String? _locationError;
   bool _isLoadingLocation = true;
+  List<CommunityPost> _allPosts = [];
 
   @override
   void initState() {
@@ -111,18 +114,47 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            heroTag: 'panic_button',
+            onPressed: () => _showPanicDialog(context),
+            backgroundColor: Colors.red,
+            child: const Icon(Icons.emergency, color: Colors.white),
+          ),
+          const SizedBox(height: 16),
+          FloatingActionButton.extended(
+            heroTag: 'report_button',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ReportIncidentScreen(
+                  authService: widget.authService,
+                  postRepository: widget.postRepository,
+                  initialLocation: _currentLocation,
+                ),
+              ),
+            ).then((_) => setState(() {})),
+            label: const Text('Report'),
+            icon: const Icon(Icons.add_alert),
+          ),
+        ],
+      ),
       body: FutureBuilder<List<CommunityPost>>(
         future: widget.postRepository.fetchPosts(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting && _allPosts.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (snapshot.hasError) {
+          if (snapshot.hasError && _allPosts.isEmpty) {
             return const Center(child: Text('Unable to load posts.'));
           }
 
-          final posts = snapshot.data ?? const <CommunityPost>[];
+          if (snapshot.hasData) {
+            _allPosts = snapshot.data!;
+          }
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -143,6 +175,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 isLoadingLocation: _isLoadingLocation,
                 locationError: _locationError,
                 onRetry: _loadCurrentLocation,
+                posts: _allPosts,
               ),
               const SizedBox(height: 20),
               Text(
@@ -150,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 12),
-              ...posts.map((post) => _PostCard(post: post)),
+              ..._allPosts.map((post) => _PostCard(post: post)),
             ],
           );
         },
@@ -180,6 +213,55 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
+
+  void _showPanicDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('EMERGENCY PANIC ALERT'),
+        content: const Text(
+          'This will send an instant alert with your location to all nearby community members. Are you in immediate danger?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              final user = widget.authService.currentUser;
+              final authorName = user?.displayName ?? user?.email ?? 'Member';
+              final panicPost = CommunityPost(
+                id: '',
+                authorName: authorName,
+                authorId: user?.uid ?? '',
+                content: '🚨 SOS PANIC ALERT: I NEED IMMEDIATE HELP!',
+                createdAt: DateTime.now(),
+                likes: 0,
+                category: PostCategory.medical, // Defaulting to medical for panic
+                severity: PostSeverity.critical,
+                latitude: _currentLocation?.latitude,
+                longitude: _currentLocation?.longitude,
+              );
+              await widget.postRepository.addPost(panicPost);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Panic alert sent to community!'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                setState(() {});
+              }
+            },
+            child: const Text('SEND SOS'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MapSection extends StatelessWidget {
@@ -189,6 +271,7 @@ class _MapSection extends StatelessWidget {
     required this.isLoadingLocation,
     required this.locationError,
     required this.onRetry,
+    required this.posts,
   });
 
   final LatLng center;
@@ -196,6 +279,7 @@ class _MapSection extends StatelessWidget {
   final bool isLoadingLocation;
   final String? locationError;
   final Future<void> Function() onRetry;
+  final List<CommunityPost> posts;
   static const String _mapTilerKey = String.fromEnvironment(
     'MAPTILER_KEY',
     defaultValue: 'uWW7vmIm5gtAhwbF20VH',
@@ -246,11 +330,43 @@ class _MapSection extends StatelessWidget {
                         width: 42,
                         height: 42,
                         child: const Icon(
-                          Icons.location_pin,
+                          Icons.person_pin_circle,
                           size: 42,
-                          color: Colors.red,
+                          color: Colors.blue,
                         ),
                       ),
+                    ...posts
+                        .where((p) => p.latitude != null && p.longitude != null)
+                        .map((p) {
+                      Color markerColor;
+                      switch (p.severity) {
+                        case PostSeverity.low:
+                          markerColor = Colors.blue;
+                          break;
+                        case PostSeverity.medium:
+                          markerColor = Colors.orange;
+                          break;
+                        case PostSeverity.high:
+                          markerColor = Colors.red;
+                          break;
+                        case PostSeverity.critical:
+                          markerColor = Colors.purple;
+                          break;
+                      }
+
+                      return Marker(
+                        point: LatLng(p.latitude!, p.longitude!),
+                        width: 30,
+                        height: 30,
+                        child: Icon(
+                          p.category == PostCategory.medical
+                              ? Icons.medical_services
+                              : Icons.warning,
+                          size: 30,
+                          color: markerColor,
+                        ),
+                      );
+                    }).toList(),
                   ],
                 ),
               ],
@@ -379,8 +495,23 @@ class _PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final createdAt =
-        '${post.createdAt.hour.toString().padLeft(2, '0')}:${post.createdAt.minute.toString().padLeft(2, '0')}';
+    final createdAt = DateFormat('HH:mm').format(post.createdAt);
+
+    Color severityColor;
+    switch (post.severity) {
+      case PostSeverity.low:
+        severityColor = Colors.blue;
+        break;
+      case PostSeverity.medium:
+        severityColor = Colors.orange;
+        break;
+      case PostSeverity.high:
+        severityColor = Colors.red;
+        break;
+      case PostSeverity.critical:
+        severityColor = Colors.purple;
+        break;
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -392,15 +523,69 @@ class _PostCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  post.authorName,
-                  style: Theme.of(context).textTheme.titleMedium,
+                Row(
+                  children: [
+                    Text(
+                      post.authorName,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    if (post.category != PostCategory.general) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: severityColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: severityColor),
+                        ),
+                        child: Text(
+                          post.category.name.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: severityColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 Text(createdAt),
               ],
             ),
             const SizedBox(height: 8),
             Text(post.content),
+            if (post.mediaUrls.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 150,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: post.mediaUrls.length,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          post.mediaUrls[index],
+                          height: 150,
+                          width: 150,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                            width: 150,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.broken_image),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
             const SizedBox(height: 10),
             Row(
               children: [
@@ -411,6 +596,9 @@ class _PostCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 4),
                 Text('${post.likes} likes'),
+                const Spacer(),
+                if (post.latitude != null && post.longitude != null)
+                  const Icon(Icons.location_on, size: 16, color: Colors.grey),
               ],
             ),
           ],
