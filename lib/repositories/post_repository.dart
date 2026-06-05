@@ -3,6 +3,7 @@ import '../models/community_post.dart';
 
 abstract class PostRepository {
   Future<List<CommunityPost>> fetchPosts();
+  Stream<List<CommunityPost>> getPostsStream();
   Future<void> addPost(CommunityPost post);
 }
 
@@ -28,6 +29,17 @@ class FirestorePostRepository implements PostRepository {
   Future<void> addPost(CommunityPost post) async {
     await _firestore.collection('posts').add(post.toMap());
   }
+
+  @override
+  Stream<List<CommunityPost>> getPostsStream() {
+    return _firestore
+        .collection('posts')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => CommunityPost.fromMap(doc.data(), doc.id))
+            .toList());
+  }
 }
 
 class ExamplePostRepository implements PostRepository {
@@ -35,58 +47,15 @@ class ExamplePostRepository implements PostRepository {
 
   @override
   Future<List<CommunityPost>> fetchPosts() async {
-    final rawDocs = <Map<String, dynamic>>[
-      {
-        'id': 'post_1',
-        'authorName': 'Amina',
-        'authorId': 'user_1',
-        'content': 'Welcome to Community. Share your story and meet neighbors.',
-        'createdAt': DateTime.now()
-            .subtract(const Duration(minutes: 45))
-            .toIso8601String(),
-        'likes': 12,
-        'category': PostCategory.general.name,
-        'severity': PostSeverity.low.name,
-      },
-      {
-        'id': 'post_2',
-        'authorName': 'Michael',
-        'authorId': 'user_2',
-        'content': 'Anyone joining the weekend clean-up activity at the park?',
-        'createdAt': DateTime.now()
-            .subtract(const Duration(hours: 2))
-            .toIso8601String(),
-        'likes': 7,
-        'category': PostCategory.general.name,
-        'severity': PostSeverity.low.name,
-      },
-      {
-        'id': 'post_3',
-        'authorName': 'Grace',
-        'authorId': 'user_3',
-        'content': 'Book club starts next Tuesday. Suggestions are welcome!',
-        'createdAt': DateTime.now()
-            .subtract(const Duration(hours: 6))
-            .toIso8601String(),
-        'likes': 18,
-        'category': PostCategory.general.name,
-        'severity': PostSeverity.low.name,
-      },
-    ];
-
-    return rawDocs
-        .map(
-          (doc) => CommunityPost.fromMap(
-            doc,
-            doc['id'] as String? ??
-                DateTime.now().millisecondsSinceEpoch.toString(),
-          ),
-        )
-        .toList(growable: false);
+    return [];
   }
 
   @override
   Future<void> addPost(CommunityPost post) async {
-    // No-op for example repository
+  }
+
+  @override
+  Stream<List<CommunityPost>> getPostsStream() {
+    return Stream.value([]);
   }
 }
