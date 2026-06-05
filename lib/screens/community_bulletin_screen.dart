@@ -48,7 +48,6 @@ class _CommunityBulletinScreenState extends State<CommunityBulletinScreen> {
 
       await widget.postRepository.addPost(post);
       _contentController.clear();
-      setState(() {});
     } finally {
       setState(() => _isSubmitting = false);
     }

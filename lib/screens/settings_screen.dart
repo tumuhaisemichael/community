@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import 'edit_profile_screen.dart';
+import 'safety_tips_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, required this.authService});
@@ -34,7 +36,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.person_outline),
             title: const Text('Edit Profile'),
             onTap: () {
-              // Feature #43: Profile Creation/Edit
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditProfileScreen(authService: widget.authService),
+                ),
+              );
             },
           ),
           ListTile(
@@ -84,8 +91,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.help_outline),
-            title: const Text('Help & Support'),
+            leading: const Icon(Icons.lightbulb_outline),
+            title: const Text('Safety Tips'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SafetyTipsScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.feedback_outlined),
+            title: const Text('Feedback & Support'),
             onTap: () {
               // Feature #59: Feedback & Support
             },

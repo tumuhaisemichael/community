@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:geolocator/geolocator.dart';
 import '../models/chat_models.dart';
 import '../repositories/chat_repository.dart';
 import '../services/auth_service.dart';
+import '../services/storage_service.dart';
 
 class ChatMessagesScreen extends StatefulWidget {
-  const ChatMessagesScreen({
+  ChatMessagesScreen({
     super.key,
     required this.authService,
     required this.chatRepository,
     required this.chatRoom,
-  });
+  }) : storageService = StorageService();
 
   final AuthService authService;
   final ChatRepository chatRepository;
   final ChatRoom chatRoom;
+  final StorageService storageService;
 
   @override
   State<ChatMessagesScreen> createState() => _ChatMessagesScreenState();
@@ -22,6 +26,7 @@ class ChatMessagesScreen extends StatefulWidget {
 
 class _ChatMessagesScreenState extends State<ChatMessagesScreen> {
   final _messageController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void dispose() {
@@ -47,6 +52,52 @@ class _ChatMessagesScreenState extends State<ChatMessagesScreen> {
     _messageController.clear();
   }
 
+  Future<void> _sendImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+
+    final urls = await widget.storageService.uploadImages([image]);
+    if (urls.isEmpty) return;
+
+    final user = widget.authService.currentUser;
+    final message = ChatMessage(
+      id: '',
+      senderId: user?.uid ?? '',
+      senderName: user?.displayName ?? user?.email ?? 'Member',
+      content: 'Shared a photo',
+      type: MessageType.image,
+      timestamp: DateTime.now(),
+      mediaUrl: urls.first,
+    );
+
+    widget.chatRepository.sendMessage(widget.chatRoom.id, message);
+  }
+
+  Future<void> _sendLocation() async {
+    try {
+      final position = await Geolocator.getCurrentPosition();
+      final user = widget.authService.currentUser;
+      final message = ChatMessage(
+        id: '',
+        senderId: user?.uid ?? '',
+        senderName: user?.displayName ?? user?.email ?? 'Member',
+        content: 'Shared location',
+        type: MessageType.location,
+        timestamp: DateTime.now(),
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+
+      widget.chatRepository.sendMessage(widget.chatRoom.id, message);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not get location: $e')),
+        );
+      }
+    }
+  }
+
   void _showMediaOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -59,7 +110,7 @@ class _ChatMessagesScreenState extends State<ChatMessagesScreen> {
               title: const Text('Send Photo'),
               onTap: () {
                 Navigator.pop(context);
-                // Feature #16: Photo sharing in chat
+                _sendImage();
               },
             ),
             ListTile(
@@ -67,7 +118,7 @@ class _ChatMessagesScreenState extends State<ChatMessagesScreen> {
               title: const Text('Send Location'),
               onTap: () {
                 Navigator.pop(context);
-                // Feature #18: Location sharing in chat
+                _sendLocation();
               },
             ),
             ListTile(
@@ -137,6 +188,44 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
+    Widget content;
+    switch (message.type) {
+      case MessageType.image:
+        content = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                message.mediaUrl!,
+                height: 200,
+                width: 200,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+              ),
+            ),
+          ],
+        );
+        break;
+      case MessageType.location:
+        content = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.location_on, size: 16),
+            const SizedBox(width: 4),
+            Text('Location: ${message.latitude?.toStringAsFixed(3)}, ${message.longitude?.toStringAsFixed(3)}'),
+          ],
+        );
+        break;
+      default:
+        content = Text(
+          message.content,
+          style: TextStyle(
+            color: isMe ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+          ),
+        );
+    }
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -161,12 +250,7 @@ class _MessageBubble extends StatelessWidget {
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
-            Text(
-              message.content,
-              style: TextStyle(
-                color: isMe ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
-              ),
-            ),
+            content,
             const SizedBox(height: 4),
             Text(
               DateFormat('HH:mm').format(message.timestamp),

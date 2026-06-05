@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum PostCategory {
   general,
   theft,
@@ -11,7 +9,6 @@ enum PostCategory {
   accident,
   harassment,
   lostChild,
-  vacationWatch,
   other,
 }
 
@@ -57,8 +54,8 @@ class CommunityPost {
       authorName: data['authorName'] as String? ?? 'Unknown member',
       authorId: data['authorId'] as String? ?? '',
       content: data['content'] as String? ?? '',
-      createdAt: data['createdAt'] is Timestamp
-          ? (data['createdAt'] as Timestamp).toDate()
+      createdAt: data['createdAt'] != null
+          ? DateTime.tryParse(data['createdAt'] as String) ?? DateTime.now()
           : DateTime.now(),
       likes: data['likes'] as int? ?? 0,
       category: PostCategory.values.firstWhere(
@@ -81,7 +78,7 @@ class CommunityPost {
       'authorName': authorName,
       'authorId': authorId,
       'content': content,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt.toIso8601String(),
       'likes': likes,
       'category': category.name,
       'severity': severity.name,

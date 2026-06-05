@@ -10,6 +10,10 @@ import 'package:community/screens/community_bulletin_screen.dart';
 import 'package:community/screens/settings_screen.dart';
 import 'package:community/widgets/post_card.dart';
 import 'package:community/screens/vacation_watch_screen.dart';
+import 'package:community/screens/neighbor_directory_screen.dart';
+import 'package:community/screens/emergency_contacts_screen.dart';
+import 'package:community/screens/police_locator_screen.dart';
+import 'package:community/screens/safety_log_screen.dart';
 
 import '../models/community_post.dart';
 import '../repositories/post_repository.dart';
@@ -123,6 +127,22 @@ class _HomeScreenState extends State<HomeScreen> {
               PopupMenuItem(
                 value: _HomeMenuAction.vacation,
                 child: Text('Vacation Watch'),
+              ),
+              PopupMenuItem(
+                value: _HomeMenuAction.directory,
+                child: Text('Neighbor Directory'),
+              ),
+              PopupMenuItem(
+                value: _HomeMenuAction.emergency,
+                child: Text('Emergency Contacts'),
+              ),
+              PopupMenuItem(
+                value: _HomeMenuAction.police,
+                child: Text('Police Station Locator'),
+              ),
+              PopupMenuItem(
+                value: _HomeMenuAction.log,
+                child: Text('Personal Safety Log'),
               ),
               PopupMenuItem(value: _HomeMenuAction.help, child: Text('Help')),
             ],
@@ -243,6 +263,49 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => VacationWatchScreen(authService: widget.authService),
+        ),
+      );
+      return;
+    }
+
+    if (action == _HomeMenuAction.directory) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const NeighborDirectoryScreen(),
+        ),
+      );
+      return;
+    }
+
+    if (action == _HomeMenuAction.emergency) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const EmergencyContactsScreen(),
+        ),
+      );
+      return;
+    }
+
+    if (action == _HomeMenuAction.police) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PoliceStationLocatorScreen(userLocation: _currentLocation),
+        ),
+      );
+      return;
+    }
+
+    if (action == _HomeMenuAction.log) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SafetyLogScreen(
+            authService: widget.authService,
+            postRepository: widget.postRepository,
+          ),
         ),
       );
       return;
@@ -517,7 +580,16 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
-enum _HomeMenuAction { about, guidelines, help, vacation }
+enum _HomeMenuAction {
+  about,
+  guidelines,
+  help,
+  vacation,
+  directory,
+  emergency,
+  police,
+  log
+}
 
 class _MenuContent {
   const _MenuContent({required this.title, required this.content});
@@ -543,4 +615,3 @@ const Map<_HomeMenuAction, _MenuContent> _menuData = {
         'Need support? For now, contact the app owner or team directly while we prepare in-app support and reporting tools.',
   ),
 };
-
