@@ -14,6 +14,7 @@ import 'package:community/screens/neighbor_directory_screen.dart';
 import 'package:community/screens/emergency_contacts_screen.dart';
 import 'package:community/screens/police_locator_screen.dart';
 import 'package:community/screens/safety_log_screen.dart';
+import 'package:community/screens/statistics_dashboard_screen.dart';
 
 import '../models/community_post.dart';
 import '../repositories/post_repository.dart';
@@ -143,6 +144,10 @@ class _HomeScreenState extends State<HomeScreen> {
               PopupMenuItem(
                 value: _HomeMenuAction.log,
                 child: Text('Personal Safety Log'),
+              ),
+              PopupMenuItem(
+                value: _HomeMenuAction.stats,
+                child: Text('Crime Statistics'),
               ),
               PopupMenuItem(value: _HomeMenuAction.help, child: Text('Help')),
             ],
@@ -304,6 +309,18 @@ class _HomeScreenState extends State<HomeScreen> {
         MaterialPageRoute(
           builder: (context) => SafetyLogScreen(
             authService: widget.authService,
+            postRepository: widget.postRepository,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (action == _HomeMenuAction.stats) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => StatisticsDashboardScreen(
             postRepository: widget.postRepository,
           ),
         ),
@@ -588,7 +605,8 @@ enum _HomeMenuAction {
   directory,
   emergency,
   police,
-  log
+  log,
+  stats
 }
 
 class _MenuContent {

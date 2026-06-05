@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'edit_profile_screen.dart';
 import 'safety_tips_screen.dart';
+import 'privacy_controls_screen.dart';
+import 'feedback_support_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, required this.authService});
@@ -48,7 +50,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.lock_outline),
             title: const Text('Privacy Controls'),
             onTap: () {
-              // Feature #44: Privacy Settings
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PrivacyControlsScreen()),
+              );
             },
           ),
           const Divider(),
@@ -104,7 +109,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             leading: const Icon(Icons.feedback_outlined),
             title: const Text('Feedback & Support'),
             onTap: () {
-              // Feature #59: Feedback & Support
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FeedbackSupportScreen(authService: widget.authService),
+                ),
+              );
             },
           ),
           ListTile(

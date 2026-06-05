@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key, required this.authService});
@@ -29,7 +30,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _updateProfile() async {
     setState(() => _isLoading = true);
     try {
-      await widget.authService.currentUser?.updateDisplayName(_nameController.text.trim());
+      final name = _nameController.text.trim();
+      final user = widget.authService.currentUser;
+      await user?.updateDisplayName(name);
+
+      // Update in users collection
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+          'displayName': name,
+        });
+      }
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(

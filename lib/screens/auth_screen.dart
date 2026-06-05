@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../services/auth_service.dart';
 
@@ -50,6 +51,16 @@ class _AuthScreenState extends State<AuthScreen> {
           email: email,
           password: password,
         );
+        // Save user profile to Firestore for Neighbor Directory
+        final user = widget.authService.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+            'displayName': user.displayName ?? 'New Member',
+            'email': user.email,
+            'isVerified': false,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
       }
     } on FirebaseAuthException catch (error) {
       setState(() {

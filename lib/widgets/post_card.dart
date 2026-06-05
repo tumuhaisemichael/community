@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/community_post.dart';
 
 class PostCard extends StatelessWidget {
@@ -65,7 +66,16 @@ class PostCard extends StatelessWidget {
                     ],
                   ],
                 ),
-                Text(createdAt),
+                Row(
+                  children: [
+                    if (post.isVerified)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 4),
+                        child: Icon(Icons.verified, color: Colors.blue, size: 16),
+                      ),
+                    Text(createdAt),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -113,6 +123,33 @@ class PostCard extends StatelessWidget {
                 const Spacer(),
                 if (post.latitude != null && post.longitude != null)
                   const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                PopupMenuButton(
+                  icon: const Icon(Icons.more_vert, size: 18),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'flag',
+                      child: Text('Flag as fake'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'verify',
+                      child: Text('Verify (Admin)'),
+                    ),
+                  ],
+                  onSelected: (value) async {
+                    if (value == 'flag') {
+                      await FirebaseFirestore.instance
+                          .collection('posts')
+                          .doc(post.id)
+                          .update({'flags': FieldValue.increment(1)});
+                    } else if (value == 'verify') {
+                      await FirebaseFirestore.instance
+                          .collection('posts')
+                          .doc(post.id)
+                          .update({'isVerified': true});
+                    }
+                  },
+                ),
               ],
             ),
           ],

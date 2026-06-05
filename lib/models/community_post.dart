@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum PostCategory {
   general,
   theft,
@@ -9,6 +11,7 @@ enum PostCategory {
   accident,
   harassment,
   lostChild,
+  vacationWatch,
   other,
 }
 
@@ -33,6 +36,8 @@ class CommunityPost {
     this.latitude,
     this.longitude,
     this.isAnonymous = false,
+    this.isVerified = false,
+    this.flags = 0,
   });
 
   final String id;
@@ -47,6 +52,8 @@ class CommunityPost {
   final double? latitude;
   final double? longitude;
   final bool isAnonymous;
+  final bool isVerified;
+  final int flags;
 
   factory CommunityPost.fromMap(Map<String, dynamic> data, String documentId) {
     return CommunityPost(
@@ -54,8 +61,8 @@ class CommunityPost {
       authorName: data['authorName'] as String? ?? 'Unknown member',
       authorId: data['authorId'] as String? ?? '',
       content: data['content'] as String? ?? '',
-      createdAt: data['createdAt'] != null
-          ? DateTime.tryParse(data['createdAt'] as String) ?? DateTime.now()
+      createdAt: data['createdAt'] is Timestamp
+          ? (data['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
       likes: data['likes'] as int? ?? 0,
       category: PostCategory.values.firstWhere(
@@ -70,6 +77,8 @@ class CommunityPost {
       latitude: (data['latitude'] as num?)?.toDouble(),
       longitude: (data['longitude'] as num?)?.toDouble(),
       isAnonymous: data['isAnonymous'] as bool? ?? false,
+      isVerified: data['isVerified'] as bool? ?? false,
+      flags: data['flags'] as int? ?? 0,
     );
   }
 
@@ -78,7 +87,7 @@ class CommunityPost {
       'authorName': authorName,
       'authorId': authorId,
       'content': content,
-      'createdAt': createdAt.toIso8601String(),
+      'createdAt': Timestamp.fromDate(createdAt),
       'likes': likes,
       'category': category.name,
       'severity': severity.name,
@@ -86,6 +95,8 @@ class CommunityPost {
       'latitude': latitude,
       'longitude': longitude,
       'isAnonymous': isAnonymous,
+      'isVerified': isVerified,
+      'flags': flags,
     };
   }
 }
