@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:community/screens/report_incident_screen.dart';
@@ -311,6 +312,12 @@ class _HomeScreenState extends State<HomeScreen> {
             _allPosts = snapshot.data!;
           }
 
+          final latestPosts = _allPosts.take(5).toList();
+          final updatesPaneHeight = math.max(
+            220.0,
+            math.min(560.0, latestPosts.length * 185.0),
+          );
+
           final feedKey = snapshot.hasError && _allPosts.isEmpty
               ? 'error'
               : _allPosts.isEmpty
@@ -438,9 +445,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 28),
                       _Stagger(
                         index: 4,
-                        child: Text(
-                          'Community updates',
-                          style: Theme.of(context).textTheme.titleMedium,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Community updates',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ),
+                            IconButton(
+                              tooltip: 'View all updates',
+                              onPressed: () => _openScreen(
+                                CommunityBulletinScreen(
+                                  authService: widget.authService,
+                                  postRepository: widget.postRepository,
+                                ),
+                              ),
+                              icon: const Icon(Icons.arrow_forward),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -462,10 +485,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                       'No updates yet. Be the first to post.',
                                 )
                               else
-                                ..._allPosts.map(
-                                  (post) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: PostCard(post: post),
+                                SizedBox(
+                                  height: updatesPaneHeight,
+                                  child: ListView.builder(
+                                    padding: EdgeInsets.zero,
+                                    itemCount: latestPosts.length,
+                                    itemBuilder: (context, index) {
+                                      final post = latestPosts[index];
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 10,
+                                        ),
+                                        child: PostCard(
+                                          post: post,
+                                          authService: widget.authService,
+                                          postRepository: widget.postRepository,
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                             ],

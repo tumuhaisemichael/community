@@ -15,12 +15,7 @@ enum PostCategory {
   other,
 }
 
-enum PostSeverity {
-  low,
-  medium,
-  high,
-  critical,
-}
+enum PostSeverity { low, medium, high, critical }
 
 class CommunityPost {
   const CommunityPost({
@@ -38,6 +33,8 @@ class CommunityPost {
     this.isAnonymous = false,
     this.isVerified = false,
     this.flags = 0,
+    this.likedBy = const [],
+    this.flaggedBy = const [],
   });
 
   final String id;
@@ -54,6 +51,8 @@ class CommunityPost {
   final bool isAnonymous;
   final bool isVerified;
   final int flags;
+  final List<String> likedBy;
+  final List<String> flaggedBy;
 
   factory CommunityPost.fromMap(Map<String, dynamic> data, String documentId) {
     return CommunityPost(
@@ -79,6 +78,8 @@ class CommunityPost {
       isAnonymous: data['isAnonymous'] as bool? ?? false,
       isVerified: data['isVerified'] as bool? ?? false,
       flags: data['flags'] as int? ?? 0,
+      likedBy: List<String>.from(data['likedBy'] ?? const []),
+      flaggedBy: List<String>.from(data['flaggedBy'] ?? const []),
     );
   }
 
@@ -97,6 +98,51 @@ class CommunityPost {
       'isAnonymous': isAnonymous,
       'isVerified': isVerified,
       'flags': flags,
+      'likedBy': likedBy,
+      'flaggedBy': flaggedBy,
+    };
+  }
+
+  bool isLikedBy(String userId) =>
+      userId.isNotEmpty && likedBy.contains(userId);
+
+  bool isFlaggedBy(String userId) =>
+      userId.isNotEmpty && flaggedBy.contains(userId);
+}
+
+class PostComment {
+  const PostComment({
+    required this.id,
+    required this.authorId,
+    required this.authorName,
+    required this.content,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String authorId;
+  final String authorName;
+  final String content;
+  final DateTime createdAt;
+
+  factory PostComment.fromMap(Map<String, dynamic> data, String documentId) {
+    return PostComment(
+      id: documentId,
+      authorId: data['authorId'] as String? ?? '',
+      authorName: data['authorName'] as String? ?? 'Member',
+      content: data['content'] as String? ?? '',
+      createdAt: data['createdAt'] is Timestamp
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'authorId': authorId,
+      'authorName': authorName,
+      'content': content,
+      'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 }

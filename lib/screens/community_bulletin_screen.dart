@@ -15,7 +15,8 @@ class CommunityBulletinScreen extends StatefulWidget {
   final PostRepository postRepository;
 
   @override
-  State<CommunityBulletinScreen> createState() => _CommunityBulletinScreenState();
+  State<CommunityBulletinScreen> createState() =>
+      _CommunityBulletinScreenState();
 }
 
 class _CommunityBulletinScreenState extends State<CommunityBulletinScreen> {
@@ -88,15 +89,16 @@ class _CommunityBulletinScreenState extends State<CommunityBulletinScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final posts = snapshot.data
-                        ?.where((p) => p.category == PostCategory.general)
-                        .toList() ??
-                    [];
+                final posts = snapshot.data ?? [];
 
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: posts.length,
-                  itemBuilder: (context, index) => PostCard(post: posts[index]),
+                  itemBuilder: (context, index) => PostCard(
+                    post: posts[index],
+                    authService: widget.authService,
+                    postRepository: widget.postRepository,
+                  ),
                 );
               },
             ),

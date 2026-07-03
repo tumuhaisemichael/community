@@ -27,7 +27,8 @@ class SafetyLogScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final myPosts = snapshot.data
+          final myPosts =
+              snapshot.data
                   ?.where((p) => p.authorId == currentUserId)
                   .toList() ??
               [];
@@ -41,7 +42,11 @@ class SafetyLogScreen extends StatelessWidget {
           return ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: myPosts.length,
-            itemBuilder: (context, index) => PostCard(post: myPosts[index]),
+            itemBuilder: (context, index) => PostCard(
+              post: myPosts[index],
+              authService: authService,
+              postRepository: postRepository,
+            ),
           );
         },
       ),
