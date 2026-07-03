@@ -3,7 +3,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:community/screens/report_incident_screen.dart';
-import 'package:intl/intl.dart';
 import 'package:community/screens/chat_list_screen.dart';
 import 'package:community/repositories/chat_repository.dart';
 import 'package:community/screens/community_bulletin_screen.dart';
@@ -19,6 +18,8 @@ import 'package:community/screens/statistics_dashboard_screen.dart';
 import '../models/community_post.dart';
 import '../repositories/post_repository.dart';
 import '../services/auth_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/beacon_mark.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -50,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadCurrentLocation() async {
+    setState(() => _isLoadingLocation = true);
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -89,310 +91,565 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _setLocationError(String message) {
     if (!mounted) return;
-
     setState(() {
       _locationError = message;
       _isLoadingLocation = false;
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final userEmail = widget.authService.currentUser?.email ?? 'Member';
+  String get _greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Community Home'),
-        leading: IconButton(
-          icon: const Icon(Icons.settings_outlined),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SettingsScreen(authService: widget.authService),
-            ),
-          ),
+  Future<T?> _openScreen<T>(Widget screen) {
+    return Navigator.push<T>(context, MaterialPageRoute(builder: (_) => screen));
+  }
+
+  void _showInfoSheet(String title, String content) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: AppColors.card,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 12),
+            Text(content, style: Theme.of(context).textTheme.bodyLarge),
+          ],
         ),
-        actions: [
-          PopupMenuButton<_HomeMenuAction>(
-            tooltip: 'Menu',
-            onSelected: (value) => _showMenuContent(context, value),
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: _HomeMenuAction.about,
-                child: Text('About Community'),
+      ),
+    );
+  }
+
+  void _showMoreInfo() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: AppColors.card,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.info_outline, color: AppColors.watch),
+                title: const Text('About Community'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showInfoSheet(
+                    'About Community',
+                    'Community is a space for neighbors and members to share updates, '
+                        'learn from each other, and build local connections.',
+                  );
+                },
               ),
-              PopupMenuItem(
-                value: _HomeMenuAction.guidelines,
-                child: Text('Community Guidelines'),
+              ListTile(
+                leading: const Icon(Icons.rule_outlined, color: AppColors.watch),
+                title: const Text('Community Guidelines'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showInfoSheet(
+                    'Community Guidelines',
+                    'Be respectful, avoid harmful language, protect personal privacy, '
+                        'and keep discussions helpful and inclusive for everyone.',
+                  );
+                },
               ),
-              PopupMenuItem(
-                value: _HomeMenuAction.vacation,
-                child: Text('Vacation Watch'),
+              ListTile(
+                leading: const Icon(Icons.help_outline, color: AppColors.watch),
+                title: const Text('Help'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showInfoSheet(
+                    'Help',
+                    'Need support? For now, contact the app owner or team directly '
+                        'while we prepare in-app support and reporting tools.',
+                  );
+                },
               ),
-              PopupMenuItem(
-                value: _HomeMenuAction.directory,
-                child: Text('Neighbor Directory'),
-              ),
-              PopupMenuItem(
-                value: _HomeMenuAction.emergency,
-                child: Text('Emergency Contacts'),
-              ),
-              PopupMenuItem(
-                value: _HomeMenuAction.police,
-                child: Text('Police Station Locator'),
-              ),
-              PopupMenuItem(
-                value: _HomeMenuAction.log,
-                child: Text('Personal Safety Log'),
-              ),
-              PopupMenuItem(
-                value: _HomeMenuAction.stats,
-                child: Text('Crime Statistics'),
-              ),
-              PopupMenuItem(value: _HomeMenuAction.help, child: Text('Help')),
+              const SizedBox(height: 8),
             ],
           ),
-          IconButton(
-            tooltip: 'Bulletin Board',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => CommunityBulletinScreen(
-                  authService: widget.authService,
-                  postRepository: widget.postRepository,
-                ),
-              ),
-            ),
-            icon: const Icon(Icons.campaign_outlined),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showSosDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Send SOS alert?'),
+        content: const Text(
+          'This will send an instant alert with your location to all nearby '
+          'community members. Only use this if you are in immediate danger.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
           ),
-          IconButton(
-            tooltip: 'Messages',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChatListScreen(
-                  authService: widget.authService,
-                  chatRepository: _chatRepository,
-                ),
-              ),
-            ),
-            icon: const Icon(Icons.chat_bubble_outline),
-          ),
-          IconButton(
-            tooltip: 'Sign out',
-            onPressed: widget.authService.signOut,
-            icon: const Icon(Icons.logout),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.alert),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Send SOS'),
           ),
         ],
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            heroTag: 'panic_button',
-            onPressed: () => _showPanicDialog(context),
-            backgroundColor: Colors.red,
-            child: const Icon(Icons.emergency, color: Colors.white),
+    );
+
+    if (confirmed != true) return;
+
+    final user = widget.authService.currentUser;
+    final authorName = user?.displayName ?? user?.email ?? 'Member';
+    final panicPost = CommunityPost(
+      id: '',
+      authorName: authorName,
+      authorId: user?.uid ?? '',
+      content: '🚨 SOS PANIC ALERT: I NEED IMMEDIATE HELP!',
+      createdAt: DateTime.now(),
+      likes: 0,
+      category: PostCategory.medical,
+      severity: PostSeverity.critical,
+      latitude: _currentLocation?.latitude,
+      longitude: _currentLocation?.longitude,
+    );
+    await widget.postRepository.addPost(panicPost);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: AppColors.alert,
+        content: Text('SOS sent. Nearby neighbors have been notified.'),
+      ),
+    );
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = widget.authService.currentUser;
+    final displayName = user?.displayName;
+    final firstName = (displayName == null || displayName.trim().isEmpty)
+        ? (user?.email?.split('@').first ?? 'neighbor')
+        : displayName.trim().split(' ').first;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: const [
+            BeaconMark(size: 26),
+            SizedBox(width: 10),
+            Text('Community'),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Bulletin board',
+            icon: const Icon(Icons.campaign_outlined),
+            onPressed: () => _openScreen(CommunityBulletinScreen(
+              authService: widget.authService,
+              postRepository: widget.postRepository,
+            )),
           ),
-          const SizedBox(height: 16),
-          FloatingActionButton.extended(
-            heroTag: 'report_button',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ReportIncidentScreen(
-                  authService: widget.authService,
-                  postRepository: widget.postRepository,
-                  initialLocation: _currentLocation,
-                ),
-              ),
-            ).then((_) => setState(() {})),
-            label: const Text('Report'),
-            icon: const Icon(Icons.add_alert),
+          IconButton(
+            tooltip: 'Messages',
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: () => _openScreen(ChatListScreen(
+              authService: widget.authService,
+              chatRepository: _chatRepository,
+            )),
+          ),
+          IconButton(
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => _openScreen(SettingsScreen(authService: widget.authService)),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openScreen(ReportIncidentScreen(
+          authService: widget.authService,
+          postRepository: widget.postRepository,
+          initialLocation: _currentLocation,
+        )).then((_) => setState(() {})),
+        label: const Text('Report'),
+        icon: const Icon(Icons.add_alert_outlined),
+        backgroundColor: AppColors.ink,
       ),
       body: StreamBuilder<List<CommunityPost>>(
         stream: widget.postRepository.getPostsStream(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting && _allPosts.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError && _allPosts.isEmpty) {
-            return const Center(child: Text('Unable to load posts.'));
-          }
-
+          final isInitialLoading =
+              snapshot.connectionState == ConnectionState.waiting && _allPosts.isEmpty;
           if (snapshot.hasData) {
             _allPosts = snapshot.data!;
           }
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text(
-                'Welcome, $userEmail',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Your current location is pinned on the map below.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              _MapSection(
-                center: _currentLocation ?? _defaultCenter,
-                currentLocation: _currentLocation,
-                isLoadingLocation: _isLoadingLocation,
-                locationError: _locationError,
-                onRetry: _loadCurrentLocation,
-                posts: _allPosts,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Here are community updates:',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
-              ..._allPosts.map((post) => PostCard(post: post)),
-            ],
+          final feedKey = snapshot.hasError && _allPosts.isEmpty
+              ? 'error'
+              : _allPosts.isEmpty
+                  ? 'empty'
+                  : _allPosts.map((p) => p.id).join(',');
+
+          return AnimatedSwitcher(
+            duration: const Duration(milliseconds: 280),
+            child: isInitialLoading
+                ? const Center(
+                    key: ValueKey('loading'),
+                    child: CircularProgressIndicator(color: AppColors.ink),
+                  )
+                : ListView(
+                    key: const ValueKey('content'),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                    children: [
+                      _Stagger(
+                        index: 0,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('$_greeting, $firstName',
+                                style: Theme.of(context).textTheme.headlineMedium),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Your neighborhood at a glance.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _Stagger(index: 1, child: _SosCard(onPressed: _showSosDialog)),
+                      const SizedBox(height: 24),
+                      _Stagger(
+                        index: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Safety tools', style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 12),
+                            _QuickActionsGrid(
+                              onVacationWatch: () => _openScreen(
+                                VacationWatchScreen(authService: widget.authService),
+                              ),
+                              onDirectory: () => _openScreen(const NeighborDirectoryScreen()),
+                              onEmergencyContacts: () =>
+                                  _openScreen(const EmergencyContactsScreen()),
+                              onPoliceLocator: () => _openScreen(
+                                PoliceStationLocatorScreen(userLocation: _currentLocation),
+                              ),
+                              onSafetyLog: () => _openScreen(SafetyLogScreen(
+                                authService: widget.authService,
+                                postRepository: widget.postRepository,
+                              )),
+                              onStats: () => _openScreen(
+                                StatisticsDashboardScreen(postRepository: widget.postRepository),
+                              ),
+                              onMoreInfo: _showMoreInfo,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      _Stagger(
+                        index: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Nearby map', style: Theme.of(context).textTheme.titleMedium),
+                                if (_locationError != null && !_isLoadingLocation)
+                                  TextButton(
+                                    onPressed: _loadCurrentLocation,
+                                    child: const Text('Retry'),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _MapSection(
+                              center: _currentLocation ?? _defaultCenter,
+                              currentLocation: _currentLocation,
+                              isLoadingLocation: _isLoadingLocation,
+                              locationError: _locationError,
+                              posts: _allPosts,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      _Stagger(
+                        index: 4,
+                        child:
+                            Text('Community updates', style: Theme.of(context).textTheme.titleMedium),
+                      ),
+                      const SizedBox(height: 12),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 320),
+                        child: KeyedSubtree(
+                          key: ValueKey(feedKey),
+                          child: Column(
+                            children: [
+                              if (snapshot.hasError && _allPosts.isEmpty)
+                                const _EmptyState(
+                                  icon: Icons.wifi_off,
+                                  message: 'Unable to load updates right now.',
+                                )
+                              else if (_allPosts.isEmpty)
+                                const _EmptyState(
+                                  icon: Icons.forum_outlined,
+                                  message: 'No updates yet. Be the first to post.',
+                                )
+                              else
+                                ..._allPosts.map((post) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 10),
+                                      child: PostCard(post: post),
+                                    )),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
           );
         },
       ),
     );
   }
+}
 
-  void _showMenuContent(BuildContext context, _HomeMenuAction action) {
-    if (action == _HomeMenuAction.vacation) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => VacationWatchScreen(authService: widget.authService),
-        ),
-      );
-      return;
-    }
+class _Stagger extends StatelessWidget {
+  const _Stagger({required this.index, required this.child, this.duration});
 
-    if (action == _HomeMenuAction.directory) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const NeighborDirectoryScreen(),
-        ),
-      );
-      return;
-    }
+  final int index;
+  final Widget child;
+  final Duration? duration;
 
-    if (action == _HomeMenuAction.emergency) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const EmergencyContactsScreen(),
-        ),
-      );
-      return;
-    }
-
-    if (action == _HomeMenuAction.police) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PoliceStationLocatorScreen(userLocation: _currentLocation),
-        ),
-      );
-      return;
-    }
-
-    if (action == _HomeMenuAction.log) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SafetyLogScreen(
-            authService: widget.authService,
-            postRepository: widget.postRepository,
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: duration ?? const Duration(milliseconds: 560),
+      curve: Interval(
+        (index * 0.09).clamp(0.0, 0.6),
+        1.0,
+        curve: Curves.easeOutCubic,
+      ),
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, (1 - value) * 16),
+            child: child,
           ),
-        ),
-      );
-      return;
-    }
+        );
+      },
+      child: child,
+    );
+  }
+}
 
-    if (action == _HomeMenuAction.stats) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => StatisticsDashboardScreen(
-            postRepository: widget.postRepository,
+class _SosCard extends StatefulWidget {
+  const _SosCard({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  State<_SosCard> createState() => _SosCardState();
+}
+
+class _SosCardState extends State<_SosCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.ink,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (_) => setState(() => _pressed = true),
+            onTapUp: (_) => setState(() => _pressed = false),
+            onTapCancel: () => setState(() => _pressed = false),
+            onTap: widget.onPressed,
+            child: AnimatedScale(
+              scale: _pressed ? 0.92 : 1.0,
+              duration: const Duration(milliseconds: 120),
+              curve: Curves.easeOut,
+              child: SizedBox(
+                width: 76,
+                height: 76,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const BeaconMark(size: 76, color: AppColors.alert, animate: true),
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: const BoxDecoration(color: AppColors.alert, shape: BoxShape.circle),
+                      child: const Center(
+                        child: Text(
+                          'SOS',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-      );
-      return;
-    }
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'In immediate danger?',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Tap the beacon to alert nearby neighbors with your location.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-    final data = _menuData[action]!;
+class _QuickActionsGrid extends StatelessWidget {
+  const _QuickActionsGrid({
+    required this.onVacationWatch,
+    required this.onDirectory,
+    required this.onEmergencyContacts,
+    required this.onPoliceLocator,
+    required this.onSafetyLog,
+    required this.onStats,
+    required this.onMoreInfo,
+  });
 
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(data.title, style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 12),
-              Text(data.content, style: Theme.of(context).textTheme.bodyMedium),
-            ],
+  final VoidCallback onVacationWatch;
+  final VoidCallback onDirectory;
+  final VoidCallback onEmergencyContacts;
+  final VoidCallback onPoliceLocator;
+  final VoidCallback onSafetyLog;
+  final VoidCallback onStats;
+  final VoidCallback onMoreInfo;
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = [
+      (icon: Icons.beach_access_outlined, label: 'Vacation\nwatch', onTap: onVacationWatch),
+      (icon: Icons.groups_outlined, label: 'Neighbor\ndirectory', onTap: onDirectory),
+      (icon: Icons.phone_in_talk_outlined, label: 'Emergency\ncontacts', onTap: onEmergencyContacts),
+      (icon: Icons.local_police_outlined, label: 'Find\npolice', onTap: onPoliceLocator),
+      (icon: Icons.edit_note_outlined, label: 'Safety\nlog', onTap: onSafetyLog),
+      (icon: Icons.bar_chart_outlined, label: 'Crime\nstats', onTap: onStats),
+      (icon: Icons.more_horiz, label: 'More\ninfo', onTap: onMoreInfo),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: actions.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 4,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.85,
+      ),
+      itemBuilder: (context, index) {
+        final action = actions[index];
+        return _Stagger(
+          index: index,
+          duration: const Duration(milliseconds: 420),
+          child: Material(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: action.onTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(action.icon, color: AppColors.watch, size: 22),
+                  const SizedBox(height: 8),
+                  Text(
+                    action.label,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppColors.ink,
+                          fontWeight: FontWeight.w600,
+                          height: 1.2,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           ),
         );
       },
     );
   }
+}
 
-  void _showPanicDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('EMERGENCY PANIC ALERT'),
-        content: const Text(
-          'This will send an instant alert with your location to all nearby community members. Are you in immediate danger?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CANCEL'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              final user = widget.authService.currentUser;
-              final authorName = user?.displayName ?? user?.email ?? 'Member';
-              final panicPost = CommunityPost(
-                id: '',
-                authorName: authorName,
-                authorId: user?.uid ?? '',
-                content: '🚨 SOS PANIC ALERT: I NEED IMMEDIATE HELP!',
-                createdAt: DateTime.now(),
-                likes: 0,
-                category: PostCategory.medical, // Defaulting to medical for panic
-                severity: PostSeverity.critical,
-                latitude: _currentLocation?.latitude,
-                longitude: _currentLocation?.longitude,
-              );
-              await widget.postRepository.addPost(panicPost);
-              if (context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Panic alert sent to community!'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                setState(() {});
-              }
-            },
-            child: const Text('SEND SOS'),
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.icon, required this.message});
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: AppColors.mutedText, size: 28),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],
       ),
@@ -406,7 +663,6 @@ class _MapSection extends StatelessWidget {
     required this.currentLocation,
     required this.isLoadingLocation,
     required this.locationError,
-    required this.onRetry,
     required this.posts,
   });
 
@@ -414,222 +670,153 @@ class _MapSection extends StatelessWidget {
   final LatLng? currentLocation;
   final bool isLoadingLocation;
   final String? locationError;
-  final Future<void> Function() onRetry;
   final List<CommunityPost> posts;
+
   static const String _mapTilerKey = String.fromEnvironment(
     'MAPTILER_KEY',
     defaultValue: 'uWW7vmIm5gtAhwbF20VH',
   );
 
+  Color _markerColor(PostSeverity severity) {
+    switch (severity) {
+      case PostSeverity.low:
+        return AppColors.watch;
+      case PostSeverity.medium:
+        return const Color(0xFFCB8A1E);
+      case PostSeverity.high:
+        return AppColors.alert;
+      case PostSeverity.critical:
+        return const Color(0xFF7B2CBF);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_mapTilerKey.isEmpty) {
-      return const Card(
-        child: SizedBox(
-          height: 300,
-          child: Center(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'Map disabled: set MAPTILER_KEY with --dart-define to load tiles.',
-                textAlign: TextAlign.center,
-              ),
+      return Container(
+        height: 220,
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              'Map disabled: set MAPTILER_KEY with --dart-define to load tiles.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
         ),
       );
     }
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: SizedBox(
-        height: 300,
-        child: Stack(
-          children: [
-            FlutterMap(
-              options: MapOptions(
-                initialCenter: center,
-                initialZoom: currentLocation != null ? 16 : 12,
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate:
-                      'https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key={key}',
-                  additionalOptions: {'key': _mapTilerKey},
-                  userAgentPackageName: 'com.example.community',
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(border: Border.all(color: AppColors.border)),
+        child: SizedBox(
+          height: 220,
+          child: Stack(
+            children: [
+              FlutterMap(
+                options: MapOptions(
+                  initialCenter: center,
+                  initialZoom: currentLocation != null ? 16 : 12,
                 ),
-                MarkerLayer(
-                  markers: [
-                    if (currentLocation != null)
-                      Marker(
-                        point: currentLocation!,
-                        width: 42,
-                        height: 42,
-                        child: const Icon(
-                          Icons.person_pin_circle,
-                          size: 42,
-                          color: Colors.blue,
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key={key}',
+                    additionalOptions: const {'key': _mapTilerKey},
+                    userAgentPackageName: 'com.example.community',
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      if (currentLocation != null)
+                        Marker(
+                          point: currentLocation!,
+                          width: 40,
+                          height: 40,
+                          child: const Icon(
+                            Icons.person_pin_circle,
+                            size: 40,
+                            color: AppColors.watch,
+                          ),
                         ),
-                      ),
-                    ...posts
-                        .where((p) => p.latitude != null && p.longitude != null)
-                        .map((p) {
-                      Color markerColor;
-                      switch (p.severity) {
-                        case PostSeverity.low:
-                          markerColor = Colors.blue;
-                          break;
-                        case PostSeverity.medium:
-                          markerColor = Colors.orange;
-                          break;
-                        case PostSeverity.high:
-                          markerColor = Colors.red;
-                          break;
-                        case PostSeverity.critical:
-                          markerColor = Colors.purple;
-                          break;
-                      }
-
-                      return Marker(
-                        point: LatLng(p.latitude!, p.longitude!),
-                        width: 30,
-                        height: 30,
-                        child: Icon(
-                          p.category == PostCategory.medical
-                              ? Icons.medical_services
-                              : Icons.warning,
-                          size: 30,
-                          color: markerColor,
-                        ),
-                      );
-                    }).toList(),
-                  ],
-                ),
-              ],
-            ),
-            if (isLoadingLocation)
-              const Align(
-                alignment: Alignment.topCenter,
-                child: _InfoBanner(
-                  text: 'Fetching your location...',
-                  icon: Icons.location_searching,
-                ),
+                      ...posts
+                          .where((p) => p.latitude != null && p.longitude != null)
+                          .map((p) => Marker(
+                                point: LatLng(p.latitude!, p.longitude!),
+                                width: 28,
+                                height: 28,
+                                child: Icon(
+                                  p.category == PostCategory.medical
+                                      ? Icons.medical_services
+                                      : Icons.warning,
+                                  size: 26,
+                                  color: _markerColor(p.severity),
+                                ),
+                              )),
+                    ],
+                  ),
+                ],
               ),
-            if (!isLoadingLocation && locationError != null)
-              Align(
-                alignment: Alignment.topCenter,
-                child: _ErrorBanner(
-                  message: locationError!,
-                  onRetry: onRetry,
+              if (isLoadingLocation)
+                const Align(
+                  alignment: Alignment.topCenter,
+                  child: _MapBanner(text: 'Fetching your location…', icon: Icons.location_searching),
                 ),
-              ),
-          ],
+              if (!isLoadingLocation && locationError != null)
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: _MapBanner(text: locationError!, icon: Icons.location_off, isError: true),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _InfoBanner extends StatelessWidget {
-  const _InfoBanner({required this.text, required this.icon});
+class _MapBanner extends StatelessWidget {
+  const _MapBanner({required this.text, required this.icon, this.isError = false});
 
   final String text;
   final IconData icon;
+  final bool isError;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(top: 12),
+      margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      constraints: const BoxConstraints(maxWidth: 280),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(100),
-        boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
-        ],
+        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18),
-          const SizedBox(width: 8),
-          Text(text),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message, required this.onRetry});
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.location_off, size: 18),
+          Icon(icon, size: 16, color: isError ? AppColors.alert : AppColors.ink),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodySmall,
+              text,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: isError ? AppColors.alert : AppColors.ink,
+                  ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
             ),
           ),
-          const SizedBox(width: 8),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
         ],
       ),
     );
   }
 }
-
-enum _HomeMenuAction {
-  about,
-  guidelines,
-  help,
-  vacation,
-  directory,
-  emergency,
-  police,
-  log,
-  stats
-}
-
-class _MenuContent {
-  const _MenuContent({required this.title, required this.content});
-
-  final String title;
-  final String content;
-}
-
-const Map<_HomeMenuAction, _MenuContent> _menuData = {
-  _HomeMenuAction.about: _MenuContent(
-    title: 'About Community',
-    content:
-        'Community is a space for neighbors and members to share updates, learn from each other, and build local connections.',
-  ),
-  _HomeMenuAction.guidelines: _MenuContent(
-    title: 'Community Guidelines',
-    content:
-        'Be respectful, avoid harmful language, protect personal privacy, and keep discussions helpful and inclusive for everyone.',
-  ),
-  _HomeMenuAction.help: _MenuContent(
-    title: 'Help',
-    content:
-        'Need support? For now, contact the app owner or team directly while we prepare in-app support and reporting tools.',
-  ),
-};

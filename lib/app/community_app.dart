@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../screens/splash_gate.dart';
+import '../theme/app_theme.dart';
 
 class CommunityApp extends StatelessWidget {
   const CommunityApp({super.key});
@@ -10,10 +11,7 @@ class CommunityApp extends StatelessWidget {
     return MaterialApp(
       title: 'Community',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B5E20)),
-      ),
+      theme: AppTheme.light,
       home: const SplashGate(),
     );
   }

@@ -34,7 +34,7 @@ class _ChatMessagesScreenState extends State<ChatMessagesScreen> {
     super.dispose();
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
@@ -48,29 +48,43 @@ class _ChatMessagesScreenState extends State<ChatMessagesScreen> {
       timestamp: DateTime.now(),
     );
 
-    widget.chatRepository.sendMessage(widget.chatRoom.id, message);
-    _messageController.clear();
+    try {
+      await widget.chatRepository.sendMessage(widget.chatRoom.id, message);
+      _messageController.clear();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not send message: $error')));
+    }
   }
 
   Future<void> _sendImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
 
-    final urls = await widget.storageService.uploadImages([image]);
-    if (urls.isEmpty) return;
+    try {
+      final urls = await widget.storageService.uploadImages([image]);
+      if (urls.isEmpty) return;
 
-    final user = widget.authService.currentUser;
-    final message = ChatMessage(
-      id: '',
-      senderId: user?.uid ?? '',
-      senderName: user?.displayName ?? user?.email ?? 'Member',
-      content: 'Shared a photo',
-      type: MessageType.image,
-      timestamp: DateTime.now(),
-      mediaUrl: urls.first,
-    );
+      final user = widget.authService.currentUser;
+      final message = ChatMessage(
+        id: '',
+        senderId: user?.uid ?? '',
+        senderName: user?.displayName ?? user?.email ?? 'Member',
+        content: 'Shared a photo',
+        type: MessageType.image,
+        timestamp: DateTime.now(),
+        mediaUrl: urls.first,
+      );
 
-    widget.chatRepository.sendMessage(widget.chatRoom.id, message);
+      await widget.chatRepository.sendMessage(widget.chatRoom.id, message);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not send photo: $error')));
+    }
   }
 
   Future<void> _sendLocation() async {
@@ -88,12 +102,12 @@ class _ChatMessagesScreenState extends State<ChatMessagesScreen> {
         longitude: position.longitude,
       );
 
-      widget.chatRepository.sendMessage(widget.chatRoom.id, message);
+      await widget.chatRepository.sendMessage(widget.chatRoom.id, message);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not get location: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not get location: $e')));
       }
     }
   }
@@ -151,6 +165,18 @@ class _ChatMessagesScreenState extends State<ChatMessagesScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        'Could not load messages: ${snapshot.error}',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+
                 final messages = snapshot.data ?? [];
 
                 return ListView.builder(
@@ -201,7 +227,8 @@ class _MessageBubble extends StatelessWidget {
                 height: 200,
                 width: 200,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
+                errorBuilder: (_, error, stackTrace) =>
+                    const Icon(Icons.broken_image),
               ),
             ),
           ],
@@ -213,7 +240,9 @@ class _MessageBubble extends StatelessWidget {
           children: [
             const Icon(Icons.location_on, size: 16),
             const SizedBox(width: 4),
-            Text('Location: ${message.latitude?.toStringAsFixed(3)}, ${message.longitude?.toStringAsFixed(3)}'),
+            Text(
+              'Location: ${message.latitude?.toStringAsFixed(3)}, ${message.longitude?.toStringAsFixed(3)}',
+            ),
           ],
         );
         break;
@@ -232,7 +261,9 @@ class _MessageBubble extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isMe ? colorScheme.primary : colorScheme.surfaceVariant,
+          color: isMe
+              ? colorScheme.primary
+              : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20).copyWith(
             bottomRight: isMe ? const Radius.circular(0) : null,
             bottomLeft: !isMe ? const Radius.circular(0) : null,
@@ -256,8 +287,11 @@ class _MessageBubble extends StatelessWidget {
               DateFormat('HH:mm').format(message.timestamp),
               style: TextStyle(
                 fontSize: 10,
-                color: (isMe ? colorScheme.onPrimary : colorScheme.onSurfaceVariant)
-                    .withOpacity(0.7),
+                color:
+                    (isMe
+                            ? colorScheme.onPrimary
+                            : colorScheme.onSurfaceVariant)
+                        .withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -286,10 +320,7 @@ class _MessageInput extends StatelessWidget {
       child: SafeArea(
         child: Row(
           children: [
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: onMediaPressed,
-            ),
+            IconButton(icon: const Icon(Icons.add), onPressed: onMediaPressed),
             Expanded(
               child: TextField(
                 controller: controller,
