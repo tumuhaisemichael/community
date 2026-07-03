@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -18,7 +17,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.authService.currentUser?.displayName);
+    _nameController = TextEditingController(
+      text: widget.authService.currentUser?.displayName,
+    );
   }
 
   @override
@@ -36,9 +37,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       // Update in users collection
       if (user != null) {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-          'displayName': name,
-        });
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({'displayName': name});
       }
 
       if (mounted) {
@@ -49,9 +51,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating profile: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating profile: $e')));
       }
     } finally {
       setState(() => _isLoading = false);
@@ -76,7 +78,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _isLoading ? null : _updateProfile,
-              child: _isLoading ? const CircularProgressIndicator() : const Text('Save Changes'),
+              child: _isLoading
+                  ? const CircularProgressIndicator()
+                  : const Text('Save Changes'),
             ),
           ],
         ),

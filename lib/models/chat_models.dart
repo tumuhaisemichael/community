@@ -12,6 +12,10 @@ class ChatMessage {
   final String? mediaUrl;
   final double? latitude;
   final double? longitude;
+  final String? replyToMessageId;
+  final String? replyPreview;
+  final String? replySenderName;
+  final DateTime? editedAt;
 
   ChatMessage({
     required this.id,
@@ -23,6 +27,10 @@ class ChatMessage {
     this.mediaUrl,
     this.latitude,
     this.longitude,
+    this.replyToMessageId,
+    this.replyPreview,
+    this.replySenderName,
+    this.editedAt,
   });
 
   factory ChatMessage.fromMap(Map<String, dynamic> data, String id) {
@@ -39,6 +47,10 @@ class ChatMessage {
       mediaUrl: data['mediaUrl'],
       latitude: (data['latitude'] as num?)?.toDouble(),
       longitude: (data['longitude'] as num?)?.toDouble(),
+      replyToMessageId: data['replyToMessageId'],
+      replyPreview: data['replyPreview'],
+      replySenderName: data['replySenderName'],
+      editedAt: (data['editedAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -52,7 +64,26 @@ class ChatMessage {
       'mediaUrl': mediaUrl,
       'latitude': latitude,
       'longitude': longitude,
+      'replyToMessageId': replyToMessageId,
+      'replyPreview': replyPreview,
+      'replySenderName': replySenderName,
+      'editedAt': editedAt != null ? Timestamp.fromDate(editedAt!) : null,
     };
+  }
+
+  String get previewText {
+    switch (type) {
+      case MessageType.image:
+        return 'Photo';
+      case MessageType.location:
+        return 'Location';
+      case MessageType.voice:
+        return 'Voice note';
+      case MessageType.video:
+        return 'Video';
+      default:
+        return content;
+    }
   }
 }
 
@@ -61,26 +92,36 @@ class ChatRoom {
   final String name;
   final List<String> participantIds;
   final String? lastMessage;
+  final String? lastMessageId;
   final DateTime? lastMessageTime;
   final bool isGroup;
+  final Map<String, int> unreadCounts;
 
   ChatRoom({
     required this.id,
     required this.name,
     required this.participantIds,
     this.lastMessage,
+    this.lastMessageId,
     this.lastMessageTime,
     this.isGroup = false,
+    this.unreadCounts = const {},
   });
 
   factory ChatRoom.fromMap(Map<String, dynamic> data, String id) {
+    final rawUnreadCounts = data['unreadCounts'] as Map<String, dynamic>? ?? {};
+
     return ChatRoom(
       id: id,
       name: data['name'] ?? 'Chat',
       participantIds: List<String>.from(data['participantIds'] ?? []),
       lastMessage: data['lastMessage'],
+      lastMessageId: data['lastMessageId'],
       lastMessageTime: (data['lastMessageTime'] as Timestamp?)?.toDate(),
       isGroup: data['isGroup'] ?? false,
+      unreadCounts: rawUnreadCounts.map(
+        (key, value) => MapEntry(key, (value as num?)?.toInt() ?? 0),
+      ),
     );
   }
 
@@ -89,10 +130,14 @@ class ChatRoom {
       'name': name,
       'participantIds': participantIds,
       'lastMessage': lastMessage,
+      'lastMessageId': lastMessageId,
       'lastMessageTime': lastMessageTime != null
           ? Timestamp.fromDate(lastMessageTime!)
           : FieldValue.serverTimestamp(),
       'isGroup': isGroup,
+      'unreadCounts': unreadCounts,
     };
   }
+
+  int unreadCountFor(String userId) => unreadCounts[userId] ?? 0;
 }

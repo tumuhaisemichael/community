@@ -22,6 +22,44 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
+  String _preferredDisplayName(Map<String, dynamic> data, String fallbackId) {
+    final rawName = (data['displayName'] as String?)?.trim();
+    final email = (data['email'] as String?)?.trim();
+    if (rawName != null &&
+        rawName.isNotEmpty &&
+        rawName.toLowerCase() != 'new member') {
+      return rawName;
+    }
+    if (email != null && email.isNotEmpty) {
+      return email.split('@').first;
+    }
+    return fallbackId;
+  }
+
+  String _resolveRoomTitle(
+    ChatRoom room,
+    String currentUserId,
+    Map<String, String> userNames,
+  ) {
+    if (room.isGroup) {
+      return room.name;
+    }
+
+    final otherUserId = room.participantIds
+        .where((participantId) => participantId != currentUserId)
+        .cast<String?>()
+        .firstWhere(
+          (participantId) => participantId != null,
+          orElse: () => null,
+        );
+
+    if (otherUserId == null) {
+      return room.name;
+    }
+
+    return userNames[otherUserId] ?? room.name;
+  }
+
   Future<void> _openNewChatPicker() async {
     final currentUser = widget.authService.currentUser;
     final currentUserId = currentUser?.uid ?? '';
@@ -81,13 +119,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 itemBuilder: (context, index) {
                   final userDoc = users[index];
                   final data = userDoc.data();
-                  final displayName =
-                      (data['displayName'] as String?)?.trim().isNotEmpty ==
-                          true
-                      ? (data['displayName'] as String).trim()
-                      : ((data['email'] as String?)?.trim().isNotEmpty == true
-                            ? (data['email'] as String).trim()
-                            : 'Member');
+                  final displayName = _preferredDisplayName(data, userDoc.id);
                   final email = (data['email'] as String?)?.trim();
 
                   return ListTile(
@@ -141,6 +173,39 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
+  Future<void> _openCommunityChat() async {
+    final currentUserId = widget.authService.currentUser?.uid ?? '';
+    if (currentUserId.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in first to open the group chat.')),
+      );
+      return;
+    }
+
+    try {
+      final room = await widget.chatRepository.createOrGetCommunityChat(
+        currentUserId: currentUserId,
+      );
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatMessagesScreen(
+            authService: widget.authService,
+            chatRepository: widget.chatRepository,
+            chatRoom: room,
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not open group chat: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = widget.authService.currentUser?.uid ?? '';
@@ -150,14 +215,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
         title: const Text('Messages'),
         actions: [
           IconButton(
+            tooltip: 'Community group',
+            icon: const Icon(Icons.groups_2_outlined),
+            onPressed: _openCommunityChat,
+          ),
+          IconButton(
             tooltip: 'Start chat',
             icon: const Icon(Icons.person_add_alt_1),
             onPressed: _openNewChatPicker,
           ),
         ],
       ),
-      body: StreamBuilder<List<ChatRoom>>(
-        stream: widget.chatRepository.getChatRooms(currentUserId),
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: widget.chatRepository.getUsersStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -168,68 +238,127 @@ class _ChatListScreenState extends State<ChatListScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Could not load chats: ${snapshot.error}',
+                  'Could not load users: ${snapshot.error}',
                   textAlign: TextAlign.center,
                 ),
               ),
             );
           }
 
-          final rooms = snapshot.data ?? [];
+          final userNames = <String, String>{
+            for (final doc in snapshot.data?.docs ?? const [])
+              doc.id: _preferredDisplayName(doc.data(), doc.id),
+          };
 
-          if (rooms.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      'No messages yet. Start a conversation with another user.',
+          return StreamBuilder<List<ChatRoom>>(
+            stream: widget.chatRepository.getChatRooms(currentUserId),
+            builder: (context, roomsSnapshot) {
+              if (roomsSnapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (roomsSnapshot.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Could not load chats: ${roomsSnapshot.error}',
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
-                      onPressed: _openNewChatPicker,
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      label: const Text('Start Chat'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
+                  ),
+                );
+              }
 
-          return ListView.builder(
-            itemCount: rooms.length,
-            itemBuilder: (context, index) {
-              final room = rooms[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  child: Icon(room.isGroup ? Icons.groups : Icons.person),
-                ),
-                title: Text(room.name),
-                subtitle: Text(
-                  room.lastMessage ?? 'No messages yet',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: room.lastMessageTime != null
-                    ? Text(
-                        DateFormat('HH:mm').format(room.lastMessageTime!),
-                        style: Theme.of(context).textTheme.bodySmall,
-                      )
-                    : null,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ChatMessagesScreen(
-                        authService: widget.authService,
-                        chatRepository: widget.chatRepository,
-                        chatRoom: room,
-                      ),
+              final rooms = roomsSnapshot.data ?? [];
+
+              if (rooms.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          'No messages yet. Start a private chat or open the community group.',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          onPressed: _openNewChatPicker,
+                          icon: const Icon(Icons.chat_bubble_outline),
+                          label: const Text('Start Chat'),
+                        ),
+                      ],
                     ),
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                itemCount: rooms.length,
+                itemBuilder: (context, index) {
+                  final room = rooms[index];
+                  final unreadCount = room.unreadCountFor(currentUserId);
+                  final roomTitle = _resolveRoomTitle(
+                    room,
+                    currentUserId,
+                    userNames,
+                  );
+
+                  return ListTile(
+                    leading: CircleAvatar(
+                      child: Icon(room.isGroup ? Icons.groups : Icons.person),
+                    ),
+                    title: Text(roomTitle),
+                    subtitle: Text(
+                      room.lastMessage ?? 'No messages yet',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (room.lastMessageTime != null)
+                          Text(
+                            DateFormat('HH:mm').format(room.lastMessageTime!),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        if (unreadCount > 0) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              unreadCount > 99 ? '99+' : '$unreadCount',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatMessagesScreen(
+                            authService: widget.authService,
+                            chatRepository: widget.chatRepository,
+                            chatRoom: room,
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               );

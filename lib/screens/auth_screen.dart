@@ -54,12 +54,17 @@ class _AuthScreenState extends State<AuthScreen> {
         // Save user profile to Firestore for Neighbor Directory
         final user = widget.authService.currentUser;
         if (user != null) {
-          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-            'displayName': user.displayName ?? 'New Member',
-            'email': user.email,
-            'isVerified': false,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+          final defaultDisplayName = email.split('@').first;
+          await user.updateDisplayName(defaultDisplayName);
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+                'displayName': defaultDisplayName,
+                'email': user.email,
+                'isVerified': false,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
         }
       }
     } on FirebaseAuthException catch (error) {
