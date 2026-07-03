@@ -34,6 +34,16 @@ class ChatRepository {
     return _firestore.collection('users').snapshots();
   }
 
+  Stream<ChatRoom> watchChatRoom(String chatRoomId) {
+    return _firestore
+        .collection('chat_rooms')
+        .doc(chatRoomId)
+        .snapshots()
+        .map(
+          (snapshot) => ChatRoom.fromMap(snapshot.data() ?? {}, snapshot.id),
+        );
+  }
+
   Stream<List<ChatMessage>> getMessages(String chatRoomId) {
     return _firestore
         .collection('chat_rooms')
@@ -108,6 +118,8 @@ class ChatRepository {
       'participantIds': [currentUserId, otherUserId],
       'isGroup': false,
       'unreadCounts': {currentUserId: 0, otherUserId: 0},
+      'backgroundKey': defaultChatBackgroundKey,
+      'bubbleThemeKey': defaultChatBubbleThemeKey,
       'lastMessageTime': FieldValue.serverTimestamp(),
     });
 
@@ -117,6 +129,8 @@ class ChatRepository {
       participantIds: [currentUserId, otherUserId],
       isGroup: false,
       unreadCounts: {currentUserId: 0, otherUserId: 0},
+      backgroundKey: defaultChatBackgroundKey,
+      bubbleThemeKey: defaultChatBubbleThemeKey,
       lastMessageTime: DateTime.now(),
     );
   }
@@ -155,6 +169,10 @@ class ChatRepository {
         'isGroup': true,
         'groupKey': 'community',
         'unreadCounts': mergedUnreadCounts,
+        'backgroundKey':
+            doc.data()['backgroundKey'] ?? defaultChatBackgroundKey,
+        'bubbleThemeKey':
+            doc.data()['bubbleThemeKey'] ?? defaultChatBubbleThemeKey,
       }, SetOptions(merge: true));
       return ChatRoom.fromMap({
         ...doc.data(),
@@ -171,6 +189,8 @@ class ChatRepository {
       'isGroup': true,
       'groupKey': 'community',
       'unreadCounts': unreadCounts,
+      'backgroundKey': defaultChatBackgroundKey,
+      'bubbleThemeKey': defaultChatBubbleThemeKey,
       'lastMessageTime': FieldValue.serverTimestamp(),
     });
 
@@ -180,6 +200,8 @@ class ChatRepository {
       participantIds: participantIds,
       isGroup: true,
       unreadCounts: unreadCounts,
+      backgroundKey: defaultChatBackgroundKey,
+      bubbleThemeKey: defaultChatBubbleThemeKey,
       lastMessageTime: DateTime.now(),
     );
   }
@@ -187,6 +209,17 @@ class ChatRepository {
   Future<void> markRoomAsRead(String chatRoomId, String userId) {
     return _firestore.collection('chat_rooms').doc(chatRoomId).set({
       'unreadCounts': {userId: 0},
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> updateChatAppearance({
+    required String chatRoomId,
+    required String backgroundKey,
+    required String bubbleThemeKey,
+  }) {
+    return _firestore.collection('chat_rooms').doc(chatRoomId).set({
+      'backgroundKey': backgroundKey,
+      'bubbleThemeKey': bubbleThemeKey,
     }, SetOptions(merge: true));
   }
 

@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+const String defaultChatBackgroundKey = 'linen';
+const String defaultChatBubbleThemeKey = 'community';
+
 enum MessageType { text, image, video, location, voice }
 
 class ChatMessage {
@@ -96,6 +99,8 @@ class ChatRoom {
   final DateTime? lastMessageTime;
   final bool isGroup;
   final Map<String, int> unreadCounts;
+  final String backgroundKey;
+  final String bubbleThemeKey;
 
   ChatRoom({
     required this.id,
@@ -106,6 +111,8 @@ class ChatRoom {
     this.lastMessageTime,
     this.isGroup = false,
     this.unreadCounts = const {},
+    this.backgroundKey = defaultChatBackgroundKey,
+    this.bubbleThemeKey = defaultChatBubbleThemeKey,
   });
 
   factory ChatRoom.fromMap(Map<String, dynamic> data, String id) {
@@ -122,6 +129,8 @@ class ChatRoom {
       unreadCounts: rawUnreadCounts.map(
         (key, value) => MapEntry(key, (value as num?)?.toInt() ?? 0),
       ),
+      backgroundKey: data['backgroundKey'] ?? defaultChatBackgroundKey,
+      bubbleThemeKey: data['bubbleThemeKey'] ?? defaultChatBubbleThemeKey,
     );
   }
 
@@ -136,6 +145,8 @@ class ChatRoom {
           : FieldValue.serverTimestamp(),
       'isGroup': isGroup,
       'unreadCounts': unreadCounts,
+      'backgroundKey': backgroundKey,
+      'bubbleThemeKey': bubbleThemeKey,
     };
   }
 

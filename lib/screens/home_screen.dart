@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:community/screens/report_incident_screen.dart';
+import 'package:community/screens/around_screen.dart';
 import 'package:community/screens/chat_list_screen.dart';
 import 'package:community/repositories/chat_repository.dart';
 import 'package:community/screens/community_bulletin_screen.dart';
@@ -18,6 +18,7 @@ import 'package:community/screens/statistics_dashboard_screen.dart';
 import '../models/community_post.dart';
 import '../repositories/post_repository.dart';
 import '../services/auth_service.dart';
+import '../services/user_location_tracking_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/beacon_mark.dart';
 
@@ -38,6 +39,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   static const LatLng _defaultCenter = LatLng(0.3476, 32.5825);
   final ChatRepository _chatRepository = ChatRepository();
+  final UserLocationTrackingService _locationTrackingService =
+      UserLocationTrackingService();
 
   LatLng? _currentLocation;
   String? _locationError;
@@ -50,43 +53,32 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadCurrentLocation();
   }
 
+  @override
+  void dispose() {
+    _locationTrackingService.stopTracking();
+    super.dispose();
+  }
+
   Future<void> _loadCurrentLocation() async {
     setState(() => _isLoadingLocation = true);
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        _setLocationError('Location services are off. Turn them on to pin your location.');
-        return;
-      }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.denied) {
-        _setLocationError('Location permission denied. Enable it to show your pin.');
-        return;
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        _setLocationError(
-          'Location permission is permanently denied. Enable it in settings to show your pin.',
-        );
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition();
-      if (!mounted) return;
-
-      setState(() {
-        _currentLocation = LatLng(position.latitude, position.longitude);
-        _locationError = null;
-        _isLoadingLocation = false;
-      });
-    } catch (_) {
-      _setLocationError('Could not fetch location right now. Please try again.');
+    final userId = widget.authService.currentUser?.uid;
+    if (userId == null || userId.isEmpty) {
+      _setLocationError('Sign in to share your location.');
+      return;
     }
+
+    await _locationTrackingService.startTracking(
+      userId: userId,
+      onLocation: (location) {
+        if (!mounted) return;
+        setState(() {
+          _currentLocation = location;
+          _locationError = null;
+          _isLoadingLocation = false;
+        });
+      },
+      onError: _setLocationError,
+    );
   }
 
   void _setLocationError(String message) {
@@ -97,6 +89,16 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _openAroundScreen() {
+    final userId = widget.authService.currentUser?.uid ?? '';
+    return _openScreen(
+      AroundScreen(
+        currentUserId: userId,
+        initialCenter: _currentLocation ?? _defaultCenter,
+      ),
+    );
+  }
+
   String get _greeting {
     final hour = DateTime.now().hour;
     if (hour < 12) return 'Good morning';
@@ -105,7 +107,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<T?> _openScreen<T>(Widget screen) {
-    return Navigator.push<T>(context, MaterialPageRoute(builder: (_) => screen));
+    return Navigator.push<T>(
+      context,
+      MaterialPageRoute(builder: (_) => screen),
+    );
   }
 
   void _showInfoSheet(String title, String content) {
@@ -152,7 +157,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.rule_outlined, color: AppColors.watch),
+                leading: const Icon(
+                  Icons.rule_outlined,
+                  color: AppColors.watch,
+                ),
                 title: const Text('Community Guidelines'),
                 onTap: () {
                   Navigator.pop(context);
@@ -256,32 +264,39 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             tooltip: 'Bulletin board',
             icon: const Icon(Icons.campaign_outlined),
-            onPressed: () => _openScreen(CommunityBulletinScreen(
-              authService: widget.authService,
-              postRepository: widget.postRepository,
-            )),
+            onPressed: () => _openScreen(
+              CommunityBulletinScreen(
+                authService: widget.authService,
+                postRepository: widget.postRepository,
+              ),
+            ),
           ),
           IconButton(
             tooltip: 'Messages',
             icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () => _openScreen(ChatListScreen(
-              authService: widget.authService,
-              chatRepository: _chatRepository,
-            )),
+            onPressed: () => _openScreen(
+              ChatListScreen(
+                authService: widget.authService,
+                chatRepository: _chatRepository,
+              ),
+            ),
           ),
           IconButton(
             tooltip: 'Settings',
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => _openScreen(SettingsScreen(authService: widget.authService)),
+            onPressed: () =>
+                _openScreen(SettingsScreen(authService: widget.authService)),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openScreen(ReportIncidentScreen(
-          authService: widget.authService,
-          postRepository: widget.postRepository,
-          initialLocation: _currentLocation,
-        )).then((_) => setState(() {})),
+        onPressed: () => _openScreen(
+          ReportIncidentScreen(
+            authService: widget.authService,
+            postRepository: widget.postRepository,
+            initialLocation: _currentLocation,
+          ),
+        ).then((_) => setState(() {})),
         label: const Text('Report'),
         icon: const Icon(Icons.add_alert_outlined),
         backgroundColor: AppColors.ink,
@@ -290,7 +305,8 @@ class _HomeScreenState extends State<HomeScreen> {
         stream: widget.postRepository.getPostsStream(),
         builder: (context, snapshot) {
           final isInitialLoading =
-              snapshot.connectionState == ConnectionState.waiting && _allPosts.isEmpty;
+              snapshot.connectionState == ConnectionState.waiting &&
+              _allPosts.isEmpty;
           if (snapshot.hasData) {
             _allPosts = snapshot.data!;
           }
@@ -298,8 +314,8 @@ class _HomeScreenState extends State<HomeScreen> {
           final feedKey = snapshot.hasError && _allPosts.isEmpty
               ? 'error'
               : _allPosts.isEmpty
-                  ? 'empty'
-                  : _allPosts.map((p) => p.id).join(',');
+              ? 'empty'
+              : _allPosts.map((p) => p.id).join(',');
 
           return AnimatedSwitcher(
             duration: const Duration(milliseconds: 280),
@@ -317,8 +333,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('$_greeting, $firstName',
-                                style: Theme.of(context).textTheme.headlineMedium),
+                            Text(
+                              '$_greeting, $firstName',
+                              style: Theme.of(context).textTheme.headlineMedium,
+                            ),
                             const SizedBox(height: 4),
                             Text(
                               'Your neighborhood at a glance.',
@@ -328,31 +346,46 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      _Stagger(index: 1, child: _SosCard(onPressed: _showSosDialog)),
+                      _Stagger(
+                        index: 1,
+                        child: _SosCard(onPressed: _showSosDialog),
+                      ),
                       const SizedBox(height: 24),
                       _Stagger(
                         index: 2,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Safety tools', style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              'Safety tools',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                             const SizedBox(height: 12),
                             _QuickActionsGrid(
                               onVacationWatch: () => _openScreen(
-                                VacationWatchScreen(authService: widget.authService),
+                                VacationWatchScreen(
+                                  authService: widget.authService,
+                                ),
                               ),
-                              onDirectory: () => _openScreen(const NeighborDirectoryScreen()),
+                              onDirectory: () =>
+                                  _openScreen(const NeighborDirectoryScreen()),
                               onEmergencyContacts: () =>
                                   _openScreen(const EmergencyContactsScreen()),
                               onPoliceLocator: () => _openScreen(
-                                PoliceStationLocatorScreen(userLocation: _currentLocation),
+                                PoliceStationLocatorScreen(
+                                  userLocation: _currentLocation,
+                                ),
                               ),
-                              onSafetyLog: () => _openScreen(SafetyLogScreen(
-                                authService: widget.authService,
-                                postRepository: widget.postRepository,
-                              )),
+                              onSafetyLog: () => _openScreen(
+                                SafetyLogScreen(
+                                  authService: widget.authService,
+                                  postRepository: widget.postRepository,
+                                ),
+                              ),
                               onStats: () => _openScreen(
-                                StatisticsDashboardScreen(postRepository: widget.postRepository),
+                                StatisticsDashboardScreen(
+                                  postRepository: widget.postRepository,
+                                ),
                               ),
                               onMoreInfo: _showMoreInfo,
                             ),
@@ -368,12 +401,27 @@ class _HomeScreenState extends State<HomeScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Nearby map', style: Theme.of(context).textTheme.titleMedium),
-                                if (_locationError != null && !_isLoadingLocation)
-                                  TextButton(
-                                    onPressed: _loadCurrentLocation,
-                                    child: const Text('Retry'),
-                                  ),
+                                Text(
+                                  'Nearby map',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TextButton(
+                                      onPressed: _openAroundScreen,
+                                      child: const Text('Around'),
+                                    ),
+                                    if (_locationError != null &&
+                                        !_isLoadingLocation)
+                                      TextButton(
+                                        onPressed: _loadCurrentLocation,
+                                        child: const Text('Retry'),
+                                      ),
+                                  ],
+                                ),
                               ],
                             ),
                             const SizedBox(height: 12),
@@ -390,8 +438,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 28),
                       _Stagger(
                         index: 4,
-                        child:
-                            Text('Community updates', style: Theme.of(context).textTheme.titleMedium),
+                        child: Text(
+                          'Community updates',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       AnimatedSwitcher(
@@ -408,13 +458,16 @@ class _HomeScreenState extends State<HomeScreen> {
                               else if (_allPosts.isEmpty)
                                 const _EmptyState(
                                   icon: Icons.forum_outlined,
-                                  message: 'No updates yet. Be the first to post.',
+                                  message:
+                                      'No updates yet. Be the first to post.',
                                 )
                               else
-                                ..._allPosts.map((post) => Padding(
-                                      padding: const EdgeInsets.only(bottom: 10),
-                                      child: PostCard(post: post),
-                                    )),
+                                ..._allPosts.map(
+                                  (post) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: PostCard(post: post),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -498,11 +551,18 @@ class _SosCardState extends State<_SosCard> {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    const BeaconMark(size: 76, color: AppColors.alert, animate: true),
+                    const BeaconMark(
+                      size: 76,
+                      color: AppColors.alert,
+                      animate: true,
+                    ),
                     Container(
                       width: 46,
                       height: 46,
-                      decoration: const BoxDecoration(color: AppColors.alert, shape: BoxShape.circle),
+                      decoration: const BoxDecoration(
+                        color: AppColors.alert,
+                        shape: BoxShape.circle,
+                      ),
                       child: const Center(
                         child: Text(
                           'SOS',
@@ -527,12 +587,16 @@ class _SosCardState extends State<_SosCard> {
               children: [
                 Text(
                   'In immediate danger?',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Tap the beacon to alert nearby neighbors with your location.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
                 ),
               ],
             ),
@@ -565,11 +629,31 @@ class _QuickActionsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = [
-      (icon: Icons.beach_access_outlined, label: 'Vacation\nwatch', onTap: onVacationWatch),
-      (icon: Icons.groups_outlined, label: 'Neighbor\ndirectory', onTap: onDirectory),
-      (icon: Icons.phone_in_talk_outlined, label: 'Emergency\ncontacts', onTap: onEmergencyContacts),
-      (icon: Icons.local_police_outlined, label: 'Find\npolice', onTap: onPoliceLocator),
-      (icon: Icons.edit_note_outlined, label: 'Safety\nlog', onTap: onSafetyLog),
+      (
+        icon: Icons.beach_access_outlined,
+        label: 'Vacation\nwatch',
+        onTap: onVacationWatch,
+      ),
+      (
+        icon: Icons.groups_outlined,
+        label: 'Neighbor\ndirectory',
+        onTap: onDirectory,
+      ),
+      (
+        icon: Icons.phone_in_talk_outlined,
+        label: 'Emergency\ncontacts',
+        onTap: onEmergencyContacts,
+      ),
+      (
+        icon: Icons.local_police_outlined,
+        label: 'Find\npolice',
+        onTap: onPoliceLocator,
+      ),
+      (
+        icon: Icons.edit_note_outlined,
+        label: 'Safety\nlog',
+        onTap: onSafetyLog,
+      ),
       (icon: Icons.bar_chart_outlined, label: 'Crime\nstats', onTap: onStats),
       (icon: Icons.more_horiz, label: 'More\ninfo', onTap: onMoreInfo),
     ];
@@ -590,35 +674,38 @@ class _QuickActionsGrid extends StatelessWidget {
           index: index,
           duration: const Duration(milliseconds: 420),
           child: Material(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(14),
-          child: InkWell(
+            color: AppColors.card,
             borderRadius: BorderRadius.circular(14),
-            onTap: action.onTap,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(action.icon, color: AppColors.watch, size: 22),
-                  const SizedBox(height: 8),
-                  Text(
-                    action.label,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppColors.ink,
-                          fontWeight: FontWeight.w600,
-                          height: 1.2,
-                        ),
-                  ),
-                ],
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: action.onTap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 6,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(action.icon, color: AppColors.watch, size: 22),
+                    const SizedBox(height: 8),
+                    Text(
+                      action.label,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.ink,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
           ),
         );
       },
@@ -747,19 +834,23 @@ class _MapSection extends StatelessWidget {
                           ),
                         ),
                       ...posts
-                          .where((p) => p.latitude != null && p.longitude != null)
-                          .map((p) => Marker(
-                                point: LatLng(p.latitude!, p.longitude!),
-                                width: 28,
-                                height: 28,
-                                child: Icon(
-                                  p.category == PostCategory.medical
-                                      ? Icons.medical_services
-                                      : Icons.warning,
-                                  size: 26,
-                                  color: _markerColor(p.severity),
-                                ),
-                              )),
+                          .where(
+                            (p) => p.latitude != null && p.longitude != null,
+                          )
+                          .map(
+                            (p) => Marker(
+                              point: LatLng(p.latitude!, p.longitude!),
+                              width: 28,
+                              height: 28,
+                              child: Icon(
+                                p.category == PostCategory.medical
+                                    ? Icons.medical_services
+                                    : Icons.warning,
+                                size: 26,
+                                color: _markerColor(p.severity),
+                              ),
+                            ),
+                          ),
                     ],
                   ),
                 ],
@@ -767,12 +858,19 @@ class _MapSection extends StatelessWidget {
               if (isLoadingLocation)
                 const Align(
                   alignment: Alignment.topCenter,
-                  child: _MapBanner(text: 'Fetching your location…', icon: Icons.location_searching),
+                  child: _MapBanner(
+                    text: 'Fetching your location…',
+                    icon: Icons.location_searching,
+                  ),
                 ),
               if (!isLoadingLocation && locationError != null)
                 Align(
                   alignment: Alignment.topCenter,
-                  child: _MapBanner(text: locationError!, icon: Icons.location_off, isError: true),
+                  child: _MapBanner(
+                    text: locationError!,
+                    icon: Icons.location_off,
+                    isError: true,
+                  ),
                 ),
             ],
           ),
@@ -783,7 +881,11 @@ class _MapSection extends StatelessWidget {
 }
 
 class _MapBanner extends StatelessWidget {
-  const _MapBanner({required this.text, required this.icon, this.isError = false});
+  const _MapBanner({
+    required this.text,
+    required this.icon,
+    this.isError = false,
+  });
 
   final String text;
   final IconData icon;
@@ -798,19 +900,25 @@ class _MapBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(100),
-        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: isError ? AppColors.alert : AppColors.ink),
+          Icon(
+            icon,
+            size: 16,
+            color: isError ? AppColors.alert : AppColors.ink,
+          ),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
               text,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: isError ? AppColors.alert : AppColors.ink,
-                  ),
+                color: isError ? AppColors.alert : AppColors.ink,
+              ),
               overflow: TextOverflow.ellipsis,
               maxLines: 2,
             ),
