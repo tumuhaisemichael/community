@@ -7,6 +7,7 @@ import 'package:community/screens/around_screen.dart';
 import 'package:community/screens/chat_list_screen.dart';
 import 'package:community/repositories/chat_repository.dart';
 import 'package:community/screens/community_bulletin_screen.dart';
+import 'package:community/screens/more_info_screen.dart';
 import 'package:community/screens/settings_screen.dart';
 import 'package:community/widgets/post_card.dart';
 import 'package:community/screens/vacation_watch_screen.dart';
@@ -114,80 +115,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showInfoSheet(String title, String content) {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: AppColors.card,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 12),
-            Text(content, style: Theme.of(context).textTheme.bodyLarge),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showMoreInfo() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: AppColors.card,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.info_outline, color: AppColors.watch),
-                title: const Text('About Community'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showInfoSheet(
-                    'About Community',
-                    'Community is a space for neighbors and members to share updates, '
-                        'learn from each other, and build local connections.',
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.rule_outlined,
-                  color: AppColors.watch,
-                ),
-                title: const Text('Community Guidelines'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showInfoSheet(
-                    'Community Guidelines',
-                    'Be respectful, avoid harmful language, protect personal privacy, '
-                        'and keep discussions helpful and inclusive for everyone.',
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.help_outline, color: AppColors.watch),
-                title: const Text('Help'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showInfoSheet(
-                    'Help',
-                    'Need support? For now, contact the app owner or team directly '
-                        'while we prepare in-app support and reporting tools.',
-                  );
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
+    _openScreen(
+      MoreInfoScreen(
+        authService: widget.authService,
+        postRepository: widget.postRepository,
+        currentLocation: _currentLocation,
       ),
     );
   }
