@@ -37,7 +37,7 @@ class _SplashGateState extends State<SplashGate> {
 
     return AuthGate(
       authService: AuthService(),
-      postRepository: const ExamplePostRepository(),
+      postRepository: FirestorePostRepository(),
     );
   }
 }
