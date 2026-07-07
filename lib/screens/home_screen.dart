@@ -378,66 +378,107 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 28),
                       _Stagger(
                         index: 4,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Community updates',
-                                style: Theme.of(context).textTheme.titleMedium,
+                        child: Container(
+                          padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: AppColors.border),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x12000000),
+                                blurRadius: 24,
+                                offset: Offset(0, 14),
                               ),
-                            ),
-                            IconButton(
-                              tooltip: 'View all updates',
-                              onPressed: () => _openScreen(
-                                CommunityBulletinScreen(
-                                  authService: widget.authService,
-                                  postRepository: widget.postRepository,
-                                ),
-                              ),
-                              icon: const Icon(Icons.arrow_forward),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 320),
-                        child: KeyedSubtree(
-                          key: ValueKey(feedKey),
+                            ],
+                          ),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (snapshot.hasError && _allPosts.isEmpty)
-                                const _EmptyState(
-                                  icon: Icons.wifi_off,
-                                  message: 'Unable to load updates right now.',
-                                )
-                              else if (_allPosts.isEmpty)
-                                const _EmptyState(
-                                  icon: Icons.forum_outlined,
-                                  message:
-                                      'No updates yet. Be the first to post.',
-                                )
-                              else
-                                SizedBox(
-                                  height: updatesPaneHeight,
-                                  child: ListView.builder(
-                                    padding: EdgeInsets.zero,
-                                    itemCount: latestPosts.length,
-                                    itemBuilder: (context, index) {
-                                      final post = latestPosts[index];
-                                      return Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 10,
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Community updates',
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleMedium,
                                         ),
-                                        child: PostCard(
-                                          post: post,
-                                          authService: widget.authService,
-                                          postRepository: widget.postRepository,
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Live reports, alerts, and neighbor check-ins.',
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodyMedium,
                                         ),
-                                      );
-                                    },
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton.filledTonal(
+                                    tooltip: 'View all updates',
+                                    onPressed: () => _openScreen(
+                                      CommunityBulletinScreen(
+                                        authService: widget.authService,
+                                        postRepository: widget.postRepository,
+                                      ),
+                                    ),
+                                    icon: const Icon(
+                                      Icons.arrow_forward_rounded,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 320),
+                                child: KeyedSubtree(
+                                  key: ValueKey(feedKey),
+                                  child: Column(
+                                    children: [
+                                      if (snapshot.hasError &&
+                                          _allPosts.isEmpty)
+                                        const _EmptyState(
+                                          icon: Icons.wifi_off,
+                                          message:
+                                              'Unable to load updates right now.',
+                                        )
+                                      else if (_allPosts.isEmpty)
+                                        const _EmptyState(
+                                          icon: Icons.forum_outlined,
+                                          message:
+                                              'No updates yet. Be the first to post.',
+                                        )
+                                      else
+                                        SizedBox(
+                                          height: updatesPaneHeight,
+                                          child: ListView.builder(
+                                            padding: EdgeInsets.zero,
+                                            itemCount: latestPosts.length,
+                                            itemBuilder: (context, index) {
+                                              final post = latestPosts[index];
+                                              return Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 10,
+                                                ),
+                                                child: PostCard(
+                                                  post: post,
+                                                  authService:
+                                                      widget.authService,
+                                                  postRepository:
+                                                      widget.postRepository,
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
+                              ),
                             ],
                           ),
                         ),

@@ -6,6 +6,7 @@ import '../models/community_post.dart';
 import '../repositories/post_repository.dart';
 import '../screens/post_location_screen.dart';
 import '../services/auth_service.dart';
+import '../theme/app_theme.dart';
 
 class PostCard extends StatefulWidget {
   const PostCard({
@@ -151,37 +152,64 @@ class _PostCardState extends State<PostCard> {
   Color _severityColor() {
     switch (post.severity) {
       case PostSeverity.low:
-        return Colors.blue;
+        return AppColors.watch;
       case PostSeverity.medium:
-        return Colors.orange;
+        return const Color(0xFFD98924);
       case PostSeverity.high:
-        return Colors.red;
+        return AppColors.alert;
       case PostSeverity.critical:
-        return Colors.purple;
+        return const Color(0xFF7A3E9D);
+    }
+  }
+
+  String _severityLabel() {
+    switch (post.severity) {
+      case PostSeverity.low:
+        return 'Routine';
+      case PostSeverity.medium:
+        return 'Watch';
+      case PostSeverity.high:
+        return 'Urgent';
+      case PostSeverity.critical:
+        return 'Critical';
+    }
+  }
+
+  String _categoryLabel() {
+    switch (post.category) {
+      case PostCategory.suspiciousPerson:
+        return 'Suspicious Person';
+      case PostCategory.lostChild:
+        return 'Lost Child';
+      case PostCategory.vacationWatch:
+        return 'Vacation Watch';
+      default:
+        final raw = post.category.name;
+        return raw.isEmpty
+            ? 'General'
+            : '${raw[0].toUpperCase()}${raw.substring(1)}';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final createdAt = DateFormat('HH:mm').format(post.createdAt);
+    final createdAt = DateFormat('MMM d • HH:mm').format(post.createdAt);
     final severityColor = _severityColor();
     final isLiked = post.isLikedBy(_currentUserId);
     final isFlaggedByUser = post.isFlaggedBy(_currentUserId);
     final hasLocation = post.latitude != null && post.longitude != null;
-    final cardColor = post.flags > 0
-        ? Colors.red.shade50
-        : Theme.of(context).cardColor;
-    final borderColor = post.flags > 0 ? Colors.red.shade300 : Colors.black12;
+    final cardColor = post.flags > 0 ? const Color(0xFFFFF7F4) : AppColors.card;
+    final borderColor = post.flags > 0 ? AppColors.alert : AppColors.border;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: cardColor,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: borderColor),
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: borderColor, width: post.flags > 0 ? 1.4 : 1),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         child: StreamBuilder<List<PostComment>>(
           stream: widget.postRepository.getCommentsStream(post.id),
           builder: (context, commentsSnapshot) {
@@ -193,21 +221,21 @@ class _PostCardState extends State<PostCard> {
                 if (post.flags > 0)
                   Container(
                     width: double.infinity,
-                    margin: const EdgeInsets.only(bottom: 12),
+                    margin: const EdgeInsets.only(bottom: 14),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
+                      horizontal: 14,
+                      vertical: 12,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red.shade300),
+                      color: AppColors.alertDim,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.alert),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.flag_rounded,
-                          color: Colors.red.shade700,
+                          color: AppColors.alert,
                           size: 18,
                         ),
                         const SizedBox(width: 8),
@@ -217,7 +245,7 @@ class _PostCardState extends State<PostCard> {
                                 ? 'Marked as possibly fake by 1 member'
                                 : 'Marked as possibly fake by ${post.flags} members',
                             style: TextStyle(
-                              color: Colors.red.shade900,
+                              color: AppColors.alert,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -228,130 +256,146 @@ class _PostCardState extends State<PostCard> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: severityColor.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        post.authorName.isEmpty
+                            ? '?'
+                            : post.authorName[0].toUpperCase(),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(color: severityColor),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 8,
-                        runSpacing: 8,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             post.authorName,
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
-                          if (post.isVerified)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
+                          const SizedBox(height: 5),
+                          Text(
+                            createdAt,
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _MetaBadge(
+                                icon: Icons.priority_high_rounded,
+                                label: _severityLabel(),
+                                tint: severityColor,
                               ),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: Colors.blue.shade200),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(
-                                    Icons.verified,
-                                    color: Colors.blue,
-                                    size: 14,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Verified',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.blue,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          if (post.category != PostCategory.general)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: severityColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: severityColor),
-                              ),
-                              child: Text(
-                                post.category.name.toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: severityColor,
-                                  fontWeight: FontWeight.bold,
+                              if (post.category != PostCategory.general)
+                                _MetaBadge(
+                                  icon: Icons.sell_outlined,
+                                  label: _categoryLabel(),
+                                  tint: AppColors.ink,
                                 ),
-                              ),
-                            ),
+                              if (post.isVerified)
+                                const _MetaBadge(
+                                  icon: Icons.verified_rounded,
+                                  label: 'Admin verified',
+                                  tint: AppColors.watch,
+                                ),
+                              if (hasLocation)
+                                const _MetaBadge(
+                                  icon: Icons.location_on_outlined,
+                                  label: 'Pinned location',
+                                  tint: AppColors.safe,
+                                ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(createdAt),
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert, size: 18),
-                          onSelected: (value) {
-                            if (value == 'flag') {
-                              _toggleFlag();
-                            } else if (value == 'verify') {
-                              _toggleVerification();
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            PopupMenuItem(
-                              value: 'flag',
-                              child: Text(
-                                isFlaggedByUser
-                                    ? 'Remove fake flag'
-                                    : 'Flag as fake',
-                              ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.canvas,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: PopupMenuButton<String>(
+                        tooltip: 'More options',
+                        icon: const Icon(Icons.more_horiz_rounded, size: 20),
+                        onSelected: (value) {
+                          if (value == 'flag') {
+                            _toggleFlag();
+                          } else if (value == 'verify') {
+                            _toggleVerification();
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'flag',
+                            child: Text(
+                              isFlaggedByUser
+                                  ? 'Remove fake flag'
+                                  : 'Flag as fake',
                             ),
-                            PopupMenuItem(
-                              value: 'verify',
-                              child: Text(
-                                post.isVerified
-                                    ? 'Remove admin tag'
-                                    : 'Verify (Admin)',
-                              ),
+                          ),
+                          PopupMenuItem(
+                            value: 'verify',
+                            child: Text(
+                              post.isVerified
+                                  ? 'Remove admin tag'
+                                  : 'Verify (Admin)',
                             ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(post.content),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Text(
+                    post.content,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(color: AppColors.ink),
+                  ),
+                ),
                 if (post.mediaUrls.isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   SizedBox(
-                    height: 150,
+                    height: 176,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: post.mediaUrls.length,
                       itemBuilder: (context, index) {
                         return Padding(
-                          padding: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.only(right: 10),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(18),
                             child: Image.network(
                               post.mediaUrls[index],
-                              height: 150,
-                              width: 150,
+                              height: 176,
+                              width: 220,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) =>
                                   Container(
-                                    width: 150,
-                                    color: Colors.grey.shade300,
+                                    width: 220,
+                                    color: AppColors.canvas,
+                                    alignment: Alignment.center,
                                     child: const Icon(Icons.broken_image),
                                   ),
                             ),
@@ -361,56 +405,69 @@ class _PostCardState extends State<PostCard> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 10),
-                Row(
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
-                    IconButton(
-                      onPressed: _toggleLike,
-                      icon: Icon(
-                        isLiked ? Icons.favorite : Icons.favorite_border,
-                        size: 20,
-                        color: isLiked
-                            ? Colors.red
-                            : Theme.of(context).colorScheme.primary,
-                      ),
-                      visualDensity: VisualDensity.compact,
+                    _ActionPill(
+                      icon: isLiked
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      label: '${post.likes} likes',
+                      onTap: _toggleLike,
+                      foreground: isLiked ? AppColors.alert : AppColors.ink,
+                      background: isLiked
+                          ? AppColors.alertDim
+                          : AppColors.canvas,
                     ),
-                    Text('${post.likes} likes'),
-                    const SizedBox(width: 8),
-                    TextButton.icon(
-                      onPressed: () {
+                    _ActionPill(
+                      icon: _showComments
+                          ? Icons.chat_bubble_rounded
+                          : Icons.chat_bubble_outline_rounded,
+                      label: 'Comments (${comments.length})',
+                      onTap: () {
                         setState(() => _showComments = !_showComments);
                       },
-                      icon: Icon(
-                        _showComments
-                            ? Icons.arrow_drop_up
-                            : Icons.arrow_drop_down,
-                      ),
-                      label: Text('Comments (${comments.length})'),
+                      foreground: AppColors.watch,
+                      background: AppColors.watchDim,
                     ),
-                    const Spacer(),
                     if (hasLocation)
-                      IconButton(
-                        tooltip: 'View sender location',
-                        onPressed: _showLocation,
-                        icon: const Icon(
-                          Icons.location_pin,
-                          color: Colors.redAccent,
-                        ),
-                        visualDensity: VisualDensity.compact,
+                      _ActionPill(
+                        icon: Icons.location_on_outlined,
+                        label: 'View location',
+                        onTap: _showLocation,
+                        foreground: AppColors.safe,
+                        background: AppColors.safeDim,
                       ),
                   ],
                 ),
                 if (_showComments) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 14),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.canvas,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: AppColors.border),
                     ),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Discussion',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${comments.length} comment${comments.length == 1 ? '' : 's'}',
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
                         if (commentsSnapshot.connectionState ==
                                 ConnectionState.waiting &&
                             comments.isEmpty)
@@ -423,62 +480,21 @@ class _PostCardState extends State<PostCard> {
                             padding: EdgeInsets.symmetric(vertical: 8),
                             child: Align(
                               alignment: Alignment.centerLeft,
-                              child: Text('No comments yet.'),
+                              child: Text(
+                                'No comments yet. Start the conversation.',
+                              ),
                             ),
                           )
                         else
                           ...comments.map(
                             (comment) => Padding(
                               padding: const EdgeInsets.only(bottom: 10),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  CircleAvatar(
-                                    radius: 16,
-                                    child: Text(
-                                      comment.authorName.isEmpty
-                                          ? '?'
-                                          : comment.authorName[0].toUpperCase(),
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                comment.authorName,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ),
-                                            Text(
-                                              DateFormat(
-                                                'MMM d, HH:mm',
-                                              ).format(comment.createdAt),
-                                              style: Theme.of(
-                                                context,
-                                              ).textTheme.bodySmall,
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(comment.content),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              child: _CommentBubble(comment: comment),
                             ),
                           ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 8),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Expanded(
                               child: TextField(
@@ -486,17 +502,21 @@ class _PostCardState extends State<PostCard> {
                                 minLines: 1,
                                 maxLines: 3,
                                 decoration: const InputDecoration(
-                                  hintText: 'Write a comment...',
+                                  hintText: 'Add your reply...',
                                   border: OutlineInputBorder(),
-                                  isDense: true,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            IconButton.filled(
+                            const SizedBox(width: 10),
+                            IconButton.filledTonal(
                               onPressed: _isSendingComment
                                   ? null
                                   : _submitComment,
+                              style: IconButton.styleFrom(
+                                backgroundColor: AppColors.ink,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(48, 48),
+                              ),
                               icon: _isSendingComment
                                   ? const SizedBox(
                                       height: 18,
@@ -506,7 +526,7 @@ class _PostCardState extends State<PostCard> {
                                         color: Colors.white,
                                       ),
                                     )
-                                  : const Icon(Icons.send),
+                                  : const Icon(Icons.send_rounded),
                             ),
                           ],
                         ),
@@ -518,6 +538,161 @@ class _PostCardState extends State<PostCard> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _MetaBadge extends StatelessWidget {
+  const _MetaBadge({
+    required this.icon,
+    required this.label,
+    required this.tint,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color tint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: tint.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: tint),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: tint,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionPill extends StatelessWidget {
+  const _ActionPill({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.foreground,
+    required this.background,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color foreground;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: foreground.withValues(alpha: 0.14)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: foreground),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: foreground),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CommentBubble extends StatelessWidget {
+  const _CommentBubble({required this.comment});
+
+  final PostComment comment;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.watchDim,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              comment.authorName.isEmpty
+                  ? '?'
+                  : comment.authorName[0].toUpperCase(),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: AppColors.watch),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        comment.authorName,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelLarge?.copyWith(color: AppColors.ink),
+                      ),
+                    ),
+                    Text(
+                      DateFormat('MMM d, HH:mm').format(comment.createdAt),
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  comment.content,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppColors.ink),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
