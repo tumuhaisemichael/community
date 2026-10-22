@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/community_ui.dart';
 import '../services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -56,7 +57,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ).showSnackBar(SnackBar(content: Text('Error updating profile: $e')));
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -64,16 +65,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Profile')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const PageIntro(
+              title: 'Make yourself at home.',
+              subtitle: 'Help your neighbors recognize you.',
+              icon: Icons.person_outline_rounded,
+              eyebrow: 'Your profile',
+            ),
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Full Name',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(labelText: 'Full Name'),
             ),
             const SizedBox(height: 24),
             FilledButton(

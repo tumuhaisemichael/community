@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../widgets/community_map.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -79,7 +81,7 @@ class AroundScreen extends StatelessWidget {
                   ),
                 ),
                 if (isVerified)
-                  const Icon(Icons.verified, color: Colors.blue, size: 20),
+                  const Icon(Icons.verified, color: AppColors.watch, size: 20),
               ],
             ),
             const SizedBox(height: 16),
@@ -154,7 +156,7 @@ class AroundScreen extends StatelessWidget {
           return Column(
             children: [
               Expanded(
-                child: FlutterMap(
+                child: CommunityMap(
                   options: MapOptions(
                     initialCenter: initialCenter,
                     initialZoom: 15,
@@ -225,7 +227,7 @@ class AroundScreen extends StatelessWidget {
                                         ? Icons.location_pin
                                         : Icons.person_pin_circle,
                                     color: doc.id == currentUserId
-                                        ? Colors.red
+                                        ? AppColors.watch
                                         : Theme.of(context).colorScheme.primary,
                                     size: 28,
                                   ),

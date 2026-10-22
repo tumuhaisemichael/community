@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../widgets/community_map.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -26,7 +28,7 @@ class PostLocationScreen extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: FlutterMap(
+            child: CommunityMap(
               options: MapOptions(initialCenter: location, initialZoom: 15),
               children: [
                 TileLayer(
@@ -68,7 +70,7 @@ class PostLocationScreen extends StatelessWidget {
                           const SizedBox(height: 4),
                           const Icon(
                             Icons.location_pin,
-                            color: Colors.red,
+                            color: AppColors.watch,
                             size: 34,
                           ),
                         ],

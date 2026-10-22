@@ -8,6 +8,7 @@ import '../repositories/vacation_watch_repository.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/post_card.dart';
+import '../widgets/community_ui.dart';
 import 'vacation_watch_screen.dart';
 
 class CommunityBulletinScreen extends StatefulWidget {
@@ -150,12 +151,20 @@ class _CommunityBulletinScreenState extends State<CommunityBulletinScreen> {
 
               return ListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                itemCount: posts.length,
-                itemBuilder: (context, index) => PostCard(
-                  post: posts[index],
-                  authService: widget.authService,
-                  postRepository: widget.postRepository,
-                ),
+                itemCount: posts.length + 1,
+                itemBuilder: (context, index) => index == 0
+                    ? const PageIntro(
+                        title: 'The neighborhood board.',
+                        subtitle:
+                            'Updates, announcements, and neighbors helping neighbors.',
+                        eyebrow: 'Community Bulletin',
+                        icon: Icons.view_agenda_outlined,
+                      )
+                    : PostCard(
+                        post: posts[index - 1],
+                        authService: widget.authService,
+                        postRepository: widget.postRepository,
+                      ),
               );
             },
           ),
@@ -199,7 +208,7 @@ class _CommunityBulletinScreenState extends State<CommunityBulletinScreen> {
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [AppColors.watch, AppColors.ink],
+                  colors: [AppColors.ink, Color(0xFF245346)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),

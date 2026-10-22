@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../widgets/community_ui.dart';
 import '../services/auth_service.dart';
 import 'edit_profile_screen.dart';
 import 'safety_tips_screen.dart';
@@ -26,22 +28,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          UserAccountsDrawerHeader(
-            margin: EdgeInsets.zero,
-            accountName: Text(user?.displayName ?? 'Member'),
-            accountEmail: Text(user?.email ?? ''),
-            currentAccountPicture: const CircleAvatar(child: Icon(Icons.person)),
+          Reveal(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.ink,
+                borderRadius: BorderRadius.circular(26),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const CircleAvatar(
+                    radius: 28,
+                    backgroundColor: AppColors.lime,
+                    child: Icon(
+                      Icons.person_outline_rounded,
+                      color: AppColors.ink,
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    user?.displayName ?? 'Member',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    user?.email ?? '',
+                    style: const TextStyle(color: Color(0xFFC7D9CE)),
+                  ),
+                ],
+              ),
+            ),
           ),
           const ListSectionTitle(title: 'Account Settings'),
           ListTile(
             leading: const Icon(Icons.person_outline),
             title: const Text('Edit Profile'),
+            trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => EditProfileScreen(authService: widget.authService),
+                  builder: (context) =>
+                      EditProfileScreen(authService: widget.authService),
                 ),
               );
             },
@@ -49,10 +84,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.lock_outline),
             title: const Text('Privacy Controls'),
+            trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const PrivacyControlsScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const PrivacyControlsScreen(),
+                ),
               );
             },
           ),
@@ -101,7 +139,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SafetyTipsScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const SafetyTipsScreen(),
+                ),
               );
             },
           ),
@@ -112,14 +152,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => FeedbackSupportScreen(authService: widget.authService),
+                  builder: (context) =>
+                      FeedbackSupportScreen(authService: widget.authService),
                 ),
               );
             },
           ),
           ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Logout', style: TextStyle(color: Colors.red)),
+            leading: const Icon(Icons.logout, color: AppColors.alert),
+            title: const Text(
+              'Logout',
+              style: TextStyle(color: AppColors.alert),
+            ),
             onTap: () {
               widget.authService.signOut();
               Navigator.pop(context);
@@ -135,25 +179,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Select Language'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            'English',
-            'Luganda',
-            'Swahili',
-            'Runyankore',
-            'Luo',
-          ].map((lang) {
-            return RadioListTile<String>(
-              title: Text(lang),
-              value: lang,
-              groupValue: _selectedLanguage,
-              onChanged: (val) {
-                setState(() => _selectedLanguage = val!);
-                Navigator.pop(context);
-              },
-            );
-          }).toList(),
+        content: RadioGroup<String>(
+          groupValue: _selectedLanguage,
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() => _selectedLanguage = value);
+            Navigator.pop(context);
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final language in [
+                'English',
+                'Luganda',
+                'Swahili',
+                'Runyankore',
+                'Luo',
+              ])
+                RadioListTile<String>(title: Text(language), value: language),
+            ],
+          ),
         ),
       ),
     );
@@ -173,7 +218,8 @@ class ListSectionTitle extends StatelessWidget {
         style: TextStyle(
           color: Theme.of(context).colorScheme.primary,
           fontWeight: FontWeight.bold,
-          fontSize: 12,
+          fontSize: 11,
+          letterSpacing: 1.5,
         ),
       ),
     );

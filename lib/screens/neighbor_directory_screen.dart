@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../widgets/community_ui.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NeighborDirectoryScreen extends StatelessWidget {
@@ -23,16 +25,32 @@ class NeighborDirectoryScreen extends StatelessWidget {
           }
 
           return ListView.builder(
-            itemCount: users.length,
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+            itemCount: users.length + 1,
             itemBuilder: (context, index) {
-              final userData = users[index].data() as Map<String, dynamic>;
-              return ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.person)),
-                title: Text(userData['displayName'] ?? 'Member'),
-                subtitle: Text(userData['address'] ?? 'Nearby Neighbor'),
-                trailing: userData['isVerified'] == true
-                    ? const Icon(Icons.verified, color: Colors.blue, size: 20)
-                    : null,
+              if (index == 0) {
+                return PageIntro(
+                  title: 'Familiar faces, nearby.',
+                  subtitle: '${users.length} neighbors in your community.',
+                  eyebrow: 'Neighbor Directory',
+                  icon: Icons.people_outline_rounded,
+                );
+              }
+              final userData = users[index - 1].data() as Map<String, dynamic>;
+              return Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  leading: const IconBadge(icon: Icons.person_outline_rounded),
+                  title: Text(userData['displayName'] ?? 'Member'),
+                  subtitle: Text(userData['address'] ?? 'Nearby Neighbor'),
+                  trailing: userData['isVerified'] == true
+                      ? const Icon(
+                          Icons.verified,
+                          color: AppColors.watch,
+                          size: 20,
+                        )
+                      : null,
+                ),
               );
             },
           );

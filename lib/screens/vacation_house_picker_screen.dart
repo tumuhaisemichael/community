@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/community_map.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -52,7 +53,7 @@ class _VacationHousePickerScreenState extends State<VacationHousePickerScreen> {
       body: Column(
         children: [
           Expanded(
-            child: FlutterMap(
+            child: CommunityMap(
               options: MapOptions(
                 initialCenter: selectedLocation ?? widget.initialCenter,
                 initialZoom: 16,
@@ -97,7 +98,7 @@ class _VacationHousePickerScreenState extends State<VacationHousePickerScreen> {
                             const SizedBox(height: 4),
                             const Icon(
                               Icons.location_pin,
-                              color: AppColors.alert,
+                              color: AppColors.watch,
                               size: 34,
                             ),
                           ],

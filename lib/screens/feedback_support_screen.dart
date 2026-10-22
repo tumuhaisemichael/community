@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/community_ui.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/auth_service.dart';
 
@@ -43,9 +44,9 @@ class _FeedbackSupportScreenState extends State<FeedbackSupportScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending feedback: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error sending feedback: $e')));
       }
     } finally {
       setState(() => _isSubmitting = false);
@@ -56,21 +57,21 @@ class _FeedbackSupportScreenState extends State<FeedbackSupportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Feedback & Support')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            const Text(
-              'Have a suggestion or found a bug? Let us know and we will look into it.',
-              style: TextStyle(fontSize: 16),
+            const PageIntro(
+              title: 'We’re listening.',
+              subtitle: 'Share your feedback or report an issue with the app.',
+              eyebrow: 'Feedback & Support',
+              icon: Icons.support_agent_rounded,
             ),
-            const SizedBox(height: 24),
             TextField(
               controller: _feedbackController,
               maxLines: 5,
               decoration: const InputDecoration(
                 hintText: 'Enter your feedback here...',
-                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 24),

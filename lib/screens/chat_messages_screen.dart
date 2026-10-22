@@ -394,7 +394,13 @@ class _ChatMessagesScreenState extends State<ChatMessagesScreen> {
 
             return Scaffold(
               appBar: AppBar(
-                title: Text(roomTitle),
+                title: Text(
+                  roomTitle,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 bottom: PreferredSize(
                   preferredSize: const Size.fromHeight(42),
                   child: InkWell(
@@ -1128,7 +1134,7 @@ class _MessageInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
       child: SafeArea(
         child: Column(
@@ -1160,11 +1166,7 @@ class _MessageInput extends StatelessWidget {
                   onPressed: onMicPressed,
                   color: Theme.of(context).colorScheme.primary,
                 ),
-                IconButton(
-                  icon: Icon(sendIcon),
-                  onPressed: onSend,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                IconButton.filled(icon: Icon(sendIcon), onPressed: onSend),
               ],
             ),
           ],

@@ -65,7 +65,7 @@ class VacationWatchDashboardScreen extends StatelessWidget {
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [AppColors.watch, AppColors.ink],
+                              colors: [AppColors.ink, Color(0xFF245346)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),

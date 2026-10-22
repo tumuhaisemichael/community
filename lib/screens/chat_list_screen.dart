@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../widgets/community_ui.dart';
 import 'package:intl/intl.dart';
 
 import '../models/chat_models.dart';
@@ -122,47 +123,50 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   final displayName = _preferredDisplayName(data, userDoc.id);
                   final email = (data['email'] as String?)?.trim();
 
-                  return ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.person)),
-                    title: Text(displayName),
-                    subtitle: email == null || email.isEmpty
-                        ? null
-                        : Text(email),
-                    onTap: () async {
-                      final navigator = Navigator.of(sheetContext);
-                      navigator.pop();
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      leading: const CircleAvatar(child: Icon(Icons.person)),
+                      title: Text(displayName),
+                      subtitle: email == null || email.isEmpty
+                          ? null
+                          : Text(email),
+                      onTap: () async {
+                        final navigator = Navigator.of(sheetContext);
+                        navigator.pop();
 
-                      try {
-                        final room = await widget.chatRepository
-                            .createOrGetPrivateChat(
-                              currentUserId: currentUserId,
-                              currentUserName:
-                                  currentUser?.displayName ??
-                                  currentUser?.email ??
-                                  'Member',
-                              otherUserId: userDoc.id,
-                              otherUserName: displayName,
-                            );
+                        try {
+                          final room = await widget.chatRepository
+                              .createOrGetPrivateChat(
+                                currentUserId: currentUserId,
+                                currentUserName:
+                                    currentUser?.displayName ??
+                                    currentUser?.email ??
+                                    'Member',
+                                otherUserId: userDoc.id,
+                                otherUserName: displayName,
+                              );
 
-                        if (!mounted) return;
-                        await Navigator.of(this.context).push(
-                          MaterialPageRoute(
-                            builder: (context) => ChatMessagesScreen(
-                              authService: widget.authService,
-                              chatRepository: widget.chatRepository,
-                              chatRoom: room,
+                          if (!mounted) return;
+                          await Navigator.of(this.context).push(
+                            MaterialPageRoute(
+                              builder: (context) => ChatMessagesScreen(
+                                authService: widget.authService,
+                                chatRepository: widget.chatRepository,
+                                chatRoom: room,
+                              ),
                             ),
-                          ),
-                        );
-                      } catch (error) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(this.context).showSnackBar(
-                          SnackBar(
-                            content: Text('Could not start chat: $error'),
-                          ),
-                        );
-                      }
-                    },
+                          );
+                        } catch (error) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text('Could not start chat: $error'),
+                            ),
+                          );
+                        }
+                      },
+                    ),
                   );
                 },
               );
@@ -295,9 +299,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
               }
 
               return ListView.builder(
-                itemCount: rooms.length,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                itemCount: rooms.length + 1,
                 itemBuilder: (context, index) {
-                  final room = rooms[index];
+                  if (index == 0) {
+                    return const PageIntro(
+                      title: 'Good conversations\nstart close to home.',
+                      subtitle: 'Private chats and your community group.',
+                      eyebrow: 'Messages',
+                      icon: Icons.forum_outlined,
+                    );
+                  }
+                  final room = rooms[index - 1];
                   final unreadCount = room.unreadCountFor(currentUserId);
                   final roomTitle = _resolveRoomTitle(
                     room,
@@ -305,60 +318,65 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     userNames,
                   );
 
-                  return ListTile(
-                    leading: CircleAvatar(
-                      child: Icon(room.isGroup ? Icons.groups : Icons.person),
-                    ),
-                    title: Text(roomTitle),
-                    subtitle: Text(
-                      room.lastMessage ?? 'No messages yet',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (room.lastMessageTime != null)
-                          Text(
-                            DateFormat('HH:mm').format(room.lastMessageTime!),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        if (unreadCount > 0) ...[
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        child: Icon(room.isGroup ? Icons.groups : Icons.person),
+                      ),
+                      title: Text(roomTitle),
+                      subtitle: Text(
+                        room.lastMessage ?? 'No messages yet',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (room.lastMessageTime != null)
+                            Text(
+                              DateFormat('HH:mm').format(room.lastMessageTime!),
+                              style: Theme.of(context).textTheme.bodySmall,
                             ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              unreadCount > 99 ? '99+' : '$unreadCount',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onPrimary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                          if (unreadCount > 0) ...[
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                unreadCount > 99 ? '99+' : '$unreadCount',
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ChatMessagesScreen(
-                            authService: widget.authService,
-                            chatRepository: widget.chatRepository,
-                            chatRoom: room,
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatMessagesScreen(
+                              authService: widget.authService,
+                              chatRepository: widget.chatRepository,
+                              chatRoom: room,
+                            ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   );
                 },
               );

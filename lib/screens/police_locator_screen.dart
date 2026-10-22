@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../widgets/community_map.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -19,14 +21,25 @@ class PoliceStationLocatorScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Police Station Locator')),
-      body: FlutterMap(
+      bottomNavigationBar: const SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(24, 4, 24, 20),
+          child: Text(
+            'Tap a station marker to see its name.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.mutedText),
+          ),
+        ),
+      ),
+      body: CommunityMap(
         options: MapOptions(
           initialCenter: userLocation ?? const LatLng(0.3476, 32.5825),
           initialZoom: 13,
         ),
         children: [
           TileLayer(
-            urlTemplate: 'https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key={key}',
+            urlTemplate:
+                'https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key={key}',
             additionalOptions: const {'key': _mapTilerKey},
           ),
           MarkerLayer(
@@ -37,11 +50,15 @@ class PoliceStationLocatorScreen extends StatelessWidget {
                 height: 40,
                 child: GestureDetector(
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(s['name'])),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(s['name'])));
                   },
-                  child: const Icon(Icons.local_police, color: Colors.blue, size: 40),
+                  child: const Icon(
+                    Icons.local_police,
+                    color: AppColors.watch,
+                    size: 40,
+                  ),
                 ),
               );
             }).toList(),

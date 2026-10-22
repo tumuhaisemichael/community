@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/community_ui.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../repositories/post_repository.dart';
@@ -126,34 +127,12 @@ class MoreInfoScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.watch, AppColors.ink],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Community Guide',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.headlineMedium?.copyWith(color: Colors.white),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'This page gathers the support, guidance, and safety links that already exist in the app so they are easy to reach from one place.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.84),
-                  ),
-                ),
-              ],
-            ),
+          const PageIntro(
+            title: 'A little guidance.',
+            subtitle:
+                'Find your way around Community, get support, and explore the tools available to you.',
+            eyebrow: 'Community Guide',
+            icon: Icons.explore_outlined,
           ),
           const SizedBox(height: 18),
           ...sections.map(

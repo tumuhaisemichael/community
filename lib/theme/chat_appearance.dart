@@ -45,7 +45,7 @@ class ChatAppearanceCatalog {
     ChatBackgroundPreset(
       key: 'linen',
       label: 'Linen',
-      colors: [Color(0xFFF7F1E8), Color(0xFFEDE6DA)],
+      colors: [Color(0xFFF6F5F0), Color(0xFFF0F1E9)],
     ),
     ChatBackgroundPreset(
       key: 'mint',
@@ -68,7 +68,7 @@ class ChatAppearanceCatalog {
     ChatBubblePreset(
       key: 'community',
       label: 'Community',
-      selfColor: Color(0xFF2F7D5D),
+      selfColor: Color(0xFF244E41),
       otherColor: Color(0xFFFFFFFF),
       selfTextColor: Colors.white,
       otherTextColor: Color(0xFF27413A),

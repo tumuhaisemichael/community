@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../widgets/community_ui.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/chat_models.dart';
@@ -179,6 +180,12 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            const PageIntro(
+              title: 'Make it feel like you.',
+              subtitle: 'Your profile, conversations, and chat appearance.',
+              eyebrow: 'Chat Settings',
+              icon: Icons.tune_rounded,
+            ),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),

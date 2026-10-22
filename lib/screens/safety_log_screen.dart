@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/community_ui.dart';
 import '../models/community_post.dart';
 import '../repositories/post_repository.dart';
 import '../services/auth_service.dart';
@@ -41,12 +42,19 @@ class SafetyLogScreen extends StatelessWidget {
 
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: myPosts.length,
-            itemBuilder: (context, index) => PostCard(
-              post: myPosts[index],
-              authService: authService,
-              postRepository: postRepository,
-            ),
+            itemCount: myPosts.length + 1,
+            itemBuilder: (context, index) => index == 0
+                ? const PageIntro(
+                    title: 'Your safety journal.',
+                    subtitle: 'A record of the incidents you have shared.',
+                    eyebrow: 'Personal Safety Log',
+                    icon: Icons.history_rounded,
+                  )
+                : PostCard(
+                    post: myPosts[index - 1],
+                    authService: authService,
+                    postRepository: postRepository,
+                  ),
           );
         },
       ),

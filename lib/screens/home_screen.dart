@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:community/screens/report_incident_screen.dart';
@@ -22,7 +21,8 @@ import '../repositories/post_repository.dart';
 import '../services/auth_service.dart';
 import '../services/user_location_tracking_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/beacon_mark.dart';
+import '../widgets/community_ui.dart';
+import '../widgets/home_overview.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -177,6 +177,30 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {});
   }
 
+  void _openBulletin() => _openScreen(
+    CommunityBulletinScreen(
+      authService: widget.authService,
+      postRepository: widget.postRepository,
+    ),
+  );
+
+  void _openMessages() => _openScreen(
+    ChatListScreen(
+      authService: widget.authService,
+      chatRepository: _chatRepository,
+    ),
+  );
+
+  void _openReport() => _openScreen(
+    ReportIncidentScreen(
+      authService: widget.authService,
+      postRepository: widget.postRepository,
+      initialLocation: _currentLocation,
+    ),
+  );
+
+  String _search = '';
+
   @override
   Widget build(BuildContext context) {
     final user = widget.authService.currentUser;
@@ -187,432 +211,233 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: const [
-            BeaconMark(size: 26),
+        toolbarHeight: 78,
+        title: const Row(
+          children: [
+            IconBadge(icon: Icons.hub_outlined, size: 38),
             SizedBox(width: 10),
-            Text('Community'),
+            Text(
+              'Community',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -.8,
+              ),
+            ),
           ],
         ),
         actions: [
           IconButton(
             tooltip: 'Bulletin board',
-            icon: const Icon(Icons.campaign_outlined),
-            onPressed: () => _openScreen(
-              CommunityBulletinScreen(
-                authService: widget.authService,
-                postRepository: widget.postRepository,
-              ),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Messages',
-            icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () => _openScreen(
-              ChatListScreen(
-                authService: widget.authService,
-                chatRepository: _chatRepository,
-              ),
-            ),
+            icon: const Icon(Icons.notifications_none_rounded),
+            onPressed: _openBulletin,
           ),
           IconButton(
             tooltip: 'Settings',
-            icon: const Icon(Icons.settings_outlined),
+            icon: const CircleAvatar(
+              backgroundColor: AppColors.safeDim,
+              child: Icon(Icons.person_outline, color: AppColors.safe),
+            ),
             onPressed: () =>
                 _openScreen(SettingsScreen(authService: widget.authService)),
           ),
+          const SizedBox(width: 8),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openScreen(
-          ReportIncidentScreen(
-            authService: widget.authService,
-            postRepository: widget.postRepository,
-            initialLocation: _currentLocation,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 0,
+
+        onDestinationSelected: (index) {
+          switch (index) {
+            case 1:
+              _openAroundScreen();
+              break;
+            case 2:
+              _openReport();
+              break;
+            case 3:
+              _openMessages();
+              break;
+            case 4:
+              _openScreen(SettingsScreen(authService: widget.authService));
+              break;
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_rounded, color: AppColors.safe),
+            label: 'Home',
           ),
-        ).then((_) => setState(() {})),
-        label: const Text('Report'),
-        icon: const Icon(Icons.add_alert_outlined),
-        backgroundColor: AppColors.ink,
+          NavigationDestination(
+            icon: Icon(Icons.location_on_outlined),
+            label: 'Around',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.add_alert_outlined),
+            label: 'Report',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.chat_bubble_outline),
+            label: 'Messages',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            label: 'Settings',
+          ),
+        ],
       ),
       body: StreamBuilder<List<CommunityPost>>(
         stream: widget.postRepository.getPostsStream(),
         builder: (context, snapshot) {
-          final isInitialLoading =
-              snapshot.connectionState == ConnectionState.waiting &&
-              _allPosts.isEmpty;
-          if (snapshot.hasData) {
-            _allPosts = snapshot.data!;
-          }
-
-          final latestPosts = _allPosts.take(5).toList();
-          final updatesPaneHeight = math.max(
-            220.0,
-            math.min(560.0, latestPosts.length * 185.0),
-          );
-
-          final feedKey = snapshot.hasError && _allPosts.isEmpty
-              ? 'error'
-              : _allPosts.isEmpty
-              ? 'empty'
-              : _allPosts.map((p) => p.id).join(',');
-
-          return AnimatedSwitcher(
-            duration: const Duration(milliseconds: 280),
-            child: isInitialLoading
-                ? const Center(
-                    key: ValueKey('loading'),
-                    child: CircularProgressIndicator(color: AppColors.ink),
-                  )
-                : ListView(
-                    key: const ValueKey('content'),
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+          if (snapshot.hasData) _allPosts = snapshot.data!;
+          final posts = _allPosts
+              .where(
+                (post) =>
+                    '${post.content} ${post.authorName} ${post.category.name}'
+                        .toLowerCase()
+                        .contains(_search.toLowerCase()),
+              )
+              .toList();
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                children: [
+                  HomeOverview(
+                    greeting: '$_greeting, $firstName',
+                    onAround: _openAroundScreen,
+                    onSos: _showSosDialog,
+                    onReport: _openReport,
+                    onVacation: () => _openScreen(
+                      VacationWatchScreen(authService: widget.authService),
+                    ),
+                    onMessages: _openMessages,
+                    onBulletin: _openBulletin,
+                  ),
+                  const SizedBox(height: 26),
+                  Row(
                     children: [
-                      _Stagger(
-                        index: 0,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '$_greeting, $firstName',
-                              style: Theme.of(context).textTheme.headlineMedium,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Your neighborhood at a glance.',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ],
+                      Expanded(
+                        child: Text(
+                          'Nearby map',
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      _Stagger(
-                        index: 1,
-                        child: _SosCard(onPressed: _showSosDialog),
-                      ),
-                      const SizedBox(height: 24),
-                      _Stagger(
-                        index: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Safety tools',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 12),
-                            _QuickActionsGrid(
-                              onVacationWatch: () => _openScreen(
-                                VacationWatchScreen(
-                                  authService: widget.authService,
-                                ),
-                              ),
-                              onDirectory: () =>
-                                  _openScreen(const NeighborDirectoryScreen()),
-                              onEmergencyContacts: () =>
-                                  _openScreen(const EmergencyContactsScreen()),
-                              onPoliceLocator: () => _openScreen(
-                                PoliceStationLocatorScreen(
-                                  userLocation: _currentLocation,
-                                ),
-                              ),
-                              onSafetyLog: () => _openScreen(
-                                SafetyLogScreen(
-                                  authService: widget.authService,
-                                  postRepository: widget.postRepository,
-                                ),
-                              ),
-                              onStats: () => _openScreen(
-                                StatisticsDashboardScreen(
-                                  postRepository: widget.postRepository,
-                                ),
-                              ),
-                              onMoreInfo: _showMoreInfo,
-                            ),
-                          ],
+                      if (_locationError != null && !_isLoadingLocation)
+                        TextButton(
+                          onPressed: _loadCurrentLocation,
+                          child: const Text('Retry'),
                         ),
-                      ),
-                      const SizedBox(height: 28),
-                      _Stagger(
-                        index: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Nearby map',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
-                                ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    TextButton(
-                                      onPressed: _openAroundScreen,
-                                      child: const Text('Around'),
-                                    ),
-                                    if (_locationError != null &&
-                                        !_isLoadingLocation)
-                                      TextButton(
-                                        onPressed: _loadCurrentLocation,
-                                        child: const Text('Retry'),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            _MapSection(
-                              center: _currentLocation ?? _defaultCenter,
-                              currentLocation: _currentLocation,
-                              isLoadingLocation: _isLoadingLocation,
-                              locationError: _locationError,
-                              posts: _allPosts,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      _Stagger(
-                        index: 4,
-                        child: Container(
-                          padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
-                          decoration: BoxDecoration(
-                            color: AppColors.card,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: AppColors.border),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x12000000),
-                                blurRadius: 24,
-                                offset: Offset(0, 14),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Community updates',
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.titleMedium,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Live reports, alerts, and neighbor check-ins.',
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.bodyMedium,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton.filledTonal(
-                                    tooltip: 'View all updates',
-                                    onPressed: () => _openScreen(
-                                      CommunityBulletinScreen(
-                                        authService: widget.authService,
-                                        postRepository: widget.postRepository,
-                                      ),
-                                    ),
-                                    icon: const Icon(
-                                      Icons.arrow_forward_rounded,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 320),
-                                child: KeyedSubtree(
-                                  key: ValueKey(feedKey),
-                                  child: Column(
-                                    children: [
-                                      if (snapshot.hasError &&
-                                          _allPosts.isEmpty)
-                                        const _EmptyState(
-                                          icon: Icons.wifi_off,
-                                          message:
-                                              'Unable to load updates right now.',
-                                        )
-                                      else if (_allPosts.isEmpty)
-                                        const _EmptyState(
-                                          icon: Icons.forum_outlined,
-                                          message:
-                                              'No updates yet. Be the first to post.',
-                                        )
-                                      else
-                                        SizedBox(
-                                          height: updatesPaneHeight,
-                                          child: ListView.builder(
-                                            padding: EdgeInsets.zero,
-                                            itemCount: latestPosts.length,
-                                            itemBuilder: (context, index) {
-                                              final post = latestPosts[index];
-                                              return Padding(
-                                                padding: const EdgeInsets.only(
-                                                  bottom: 10,
-                                                ),
-                                                child: PostCard(
-                                                  post: post,
-                                                  authService:
-                                                      widget.authService,
-                                                  postRepository:
-                                                      widget.postRepository,
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      TextButton.icon(
+                        onPressed: _openAroundScreen,
+                        icon: const Icon(Icons.near_me_outlined, size: 17),
+                        label: const Text('Around'),
                       ),
                     ],
                   ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _Stagger extends StatelessWidget {
-  const _Stagger({required this.index, required this.child, this.duration});
-
-  final int index;
-  final Widget child;
-  final Duration? duration;
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: duration ?? const Duration(milliseconds: 560),
-      curve: Interval(
-        (index * 0.09).clamp(0.0, 0.6),
-        1.0,
-        curve: Curves.easeOutCubic,
-      ),
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, (1 - value) * 16),
-            child: child,
-          ),
-        );
-      },
-      child: child,
-    );
-  }
-}
-
-class _SosCard extends StatefulWidget {
-  const _SosCard({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  State<_SosCard> createState() => _SosCardState();
-}
-
-class _SosCardState extends State<_SosCard> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.ink,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapDown: (_) => setState(() => _pressed = true),
-            onTapUp: (_) => setState(() => _pressed = false),
-            onTapCancel: () => setState(() => _pressed = false),
-            onTap: widget.onPressed,
-            child: AnimatedScale(
-              scale: _pressed ? 0.92 : 1.0,
-              duration: const Duration(milliseconds: 120),
-              curve: Curves.easeOut,
-              child: SizedBox(
-                width: 76,
-                height: 76,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    const BeaconMark(
-                      size: 76,
-                      color: AppColors.alert,
-                      animate: true,
+                  _MapSection(
+                    center: _currentLocation ?? _defaultCenter,
+                    currentLocation: _currentLocation,
+                    isLoadingLocation: _isLoadingLocation,
+                    locationError: _locationError,
+                    posts: _allPosts,
+                  ),
+                  const SizedBox(height: 26),
+                  const SectionHeading(
+                    title: 'Safety tools',
+                    subtitle: 'Looking out for each other.',
+                  ),
+                  _QuickActionsGrid(
+                    onVacationWatch: () => _openScreen(
+                      VacationWatchScreen(authService: widget.authService),
                     ),
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: const BoxDecoration(
-                        color: AppColors.alert,
-                        shape: BoxShape.circle,
+                    onDirectory: () =>
+                        _openScreen(const NeighborDirectoryScreen()),
+                    onEmergencyContacts: () => _openScreen(
+                      EmergencyContactsScreen(onSos: _showSosDialog),
+                    ),
+                    onPoliceLocator: () => _openScreen(
+                      PoliceStationLocatorScreen(
+                        userLocation: _currentLocation,
                       ),
-                      child: const Center(
+                    ),
+                    onSafetyLog: () => _openScreen(
+                      SafetyLogScreen(
+                        authService: widget.authService,
+                        postRepository: widget.postRepository,
+                      ),
+                    ),
+                    onStats: () => _openScreen(
+                      StatisticsDashboardScreen(
+                        postRepository: widget.postRepository,
+                      ),
+                    ),
+                    onMoreInfo: _showMoreInfo,
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      const Icon(Icons.campaign_rounded, color: AppColors.safe),
+                      const SizedBox(width: 8),
+                      Expanded(
                         child: Text(
-                          'SOS',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
+                          'Community updates',
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ),
+                      TextButton(
+                        onPressed: _openBulletin,
+                        child: const Text('See all'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    onChanged: (value) =>
+                        setState(() => _search = value.trim()),
+                    decoration: const InputDecoration(
+                      hintText: 'Search community updates',
+                      prefixIcon: Icon(Icons.search_rounded),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      _allPosts.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (snapshot.hasError && _allPosts.isEmpty)
+                    const _EmptyState(
+                      icon: Icons.wifi_off,
+                      message: 'Unable to load updates right now.',
+                    )
+                  else if (posts.isEmpty)
+                    _EmptyState(
+                      icon: Icons.forum_outlined,
+                      message: _search.isEmpty
+                          ? 'No updates yet. Be the first to post.'
+                          : 'No updates match your search.',
+                    )
+                  else
+                    ...posts
+                        .take(_search.isEmpty ? 5 : posts.length)
+                        .map(
+                          (post) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: PostCard(
+                              post: post,
+                              authService: widget.authService,
+                              postRepository: widget.postRepository,
+                            ),
+                          ),
+                        ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'In immediate danger?',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleMedium?.copyWith(color: Colors.white),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Tap the beacon to alert nearby neighbors with your location.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -669,55 +494,59 @@ class _QuickActionsGrid extends StatelessWidget {
       (icon: Icons.more_horiz, label: 'More\ninfo', onTap: onMoreInfo),
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: actions.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 0.85,
-      ),
-      itemBuilder: (context, index) {
-        final action = actions[index];
-        return _Stagger(
-          index: index,
-          duration: const Duration(milliseconds: 420),
-          child: Material(
-            color: AppColors.card,
-            borderRadius: BorderRadius.circular(14),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: action.onTap,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 6,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(action.icon, color: AppColors.watch, size: 22),
-                    const SizedBox(height: 8),
-                    Text(
-                      action.label,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.ink,
-                        fontWeight: FontWeight.w600,
-                        height: 1.2,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 650 ? 3 : 2;
+        final width = (constraints.maxWidth - 12 * (columns - 1)) / columns;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            for (var index = 0; index < actions.length; index++)
+              SizedBox(
+                width: width,
+                child: Reveal(
+                  order: index,
+                  child: Material(
+                    color: AppColors.card,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      side: const BorderSide(color: AppColors.border),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: actions[index].onTap,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 18,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              actions[index].icon,
+                              color: AppColors.watch,
+                              size: 21,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                actions[index].label.replaceAll('\n', ' '),
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      color: AppColors.ink,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
+          ],
         );
       },
     );
@@ -792,7 +621,7 @@ class _MapSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (_mapTilerKey.isEmpty) {
       return Container(
-        height: 220,
+        height: 250,
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(16),
@@ -812,14 +641,15 @@ class _MapSection extends StatelessWidget {
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(24),
       child: Container(
         decoration: BoxDecoration(border: Border.all(color: AppColors.border)),
         child: SizedBox(
-          height: 220,
+          height: 250,
           child: Stack(
             children: [
               FlutterMap(
+                key: ValueKey(currentLocation == null),
                 options: MapOptions(
                   initialCenter: center,
                   initialZoom: currentLocation != null ? 16 : 12,
@@ -831,6 +661,19 @@ class _MapSection extends StatelessWidget {
                     additionalOptions: const {'key': _mapTilerKey},
                     userAgentPackageName: 'com.example.community',
                   ),
+                  if (currentLocation != null)
+                    CircleLayer(
+                      circles: [
+                        CircleMarker(
+                          point: currentLocation!,
+                          radius: 250,
+                          useRadiusInMeter: true,
+                          color: AppColors.watch.withValues(alpha: 0.08),
+                          borderColor: AppColors.watch.withValues(alpha: 0.5),
+                          borderStrokeWidth: 2,
+                        ),
+                      ],
+                    ),
                   MarkerLayer(
                     markers: [
                       if (currentLocation != null)
