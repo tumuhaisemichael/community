@@ -24,7 +24,10 @@ class HomeOverview extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      CommunityHero(greeting: greeting, onAround: onAround),
+      ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 280),
+        child: CommunityHero(greeting: greeting, onAround: onAround),
+      ),
       const SizedBox(height: 18),
       Reveal(
         order: 1,
