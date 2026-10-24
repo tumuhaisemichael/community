@@ -1,20 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../repositories/post_repository.dart';
 import '../services/auth_service.dart';
-import 'auth_screen.dart';
 import 'home_screen.dart';
+import 'welcome_screen.dart';
 
 class AuthGate extends StatelessWidget {
-  const AuthGate({
-    super.key,
-    required this.authService,
-    required this.postRepository,
-  });
+  const AuthGate({super.key, required this.authService});
 
   final AuthService authService;
-  final PostRepository postRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -28,13 +22,10 @@ class AuthGate extends StatelessWidget {
         }
 
         if (snapshot.hasData) {
-          return HomeScreen(
-            authService: authService,
-            postRepository: postRepository,
-          );
+          return HomeScreen(authService: authService);
         }
 
-        return AuthScreen(authService: authService);
+        return WelcomeScreen(authService: authService);
       },
     );
   }

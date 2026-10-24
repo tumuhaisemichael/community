@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../repositories/post_repository.dart';
 import '../services/auth_service.dart';
 import 'auth_gate.dart';
 
@@ -35,10 +34,7 @@ class _SplashGateState extends State<SplashGate> {
       return const SplashScreen();
     }
 
-    return AuthGate(
-      authService: AuthService(),
-      postRepository: const ExamplePostRepository(),
-    );
+    return AuthGate(authService: AuthService());
   }
 }
 
@@ -62,7 +58,7 @@ class SplashScreen extends StatelessWidget {
         ),
         child: const Center(
           child: Text(
-            'Community',
+            'tumuhaise',
             style: TextStyle(
               color: Colors.white,
               fontSize: 40,

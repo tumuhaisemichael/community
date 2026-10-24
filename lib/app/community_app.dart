@@ -8,7 +8,7 @@ class CommunityApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Community',
+      title: 'tumuhaise',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
