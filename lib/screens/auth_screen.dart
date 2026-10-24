@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../widgets/community_ui.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../services/auth_service.dart';
 
@@ -50,6 +52,21 @@ class _AuthScreenState extends State<AuthScreen> {
           email: email,
           password: password,
         );
+        // Save user profile to Firestore for Neighbor Directory
+        final user = widget.authService.currentUser;
+        if (user != null) {
+          final defaultDisplayName = email.split('@').first;
+          await user.updateDisplayName(defaultDisplayName);
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+                'displayName': defaultDisplayName,
+                'email': user.email,
+                'isVerified': false,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
+        }
       }
     } on FirebaseAuthException catch (error) {
       setState(() {
@@ -93,19 +110,18 @@ class _AuthScreenState extends State<AuthScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          title,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineSmall,
+                        PageIntro(
+                          title: title,
+                          subtitle: _isLogin
+                              ? 'Your neighborhood is a little closer from here.'
+                              : 'Join the people who make your neighborhood home.',
+                          eyebrow: 'Welcome to Community',
+                          icon: Icons.hub_outlined,
                         ),
-                        const SizedBox(height: 20),
                         TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            border: OutlineInputBorder(),
-                          ),
+                          decoration: const InputDecoration(labelText: 'Email'),
                           validator: (value) {
                             final email = value?.trim() ?? '';
                             if (email.isEmpty || !email.contains('@')) {
@@ -120,7 +136,6 @@ class _AuthScreenState extends State<AuthScreen> {
                           obscureText: true,
                           decoration: const InputDecoration(
                             labelText: 'Password',
-                            border: OutlineInputBorder(),
                           ),
                           validator: (value) {
                             if ((value ?? '').trim().length < 6) {

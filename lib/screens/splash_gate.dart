@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
+import '../widgets/community_ui.dart';
 
 import '../services/auth_service.dart';
 import 'auth_gate.dart';
@@ -34,7 +36,10 @@ class _SplashGateState extends State<SplashGate> {
       return const SplashScreen();
     }
 
-    return AuthGate(authService: AuthService());
+    return AuthGate(
+      authService: AuthService(),
+      postRepository: FirestorePostRepository(),
+    );
   }
 }
 
@@ -44,26 +49,29 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.secondary,
+      backgroundColor: AppColors.ink,
+      body: const Center(
+        child: Reveal(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.hub_outlined, color: AppColors.lime, size: 64),
+              SizedBox(height: 24),
+              Text(
+                'Community',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 38,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -1.5,
+                ),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'A little closer. A little safer.',
+                style: TextStyle(color: Color(0xFFC7D9CE), fontSize: 15),
+              ),
             ],
-          ),
-        ),
-        child: const Center(
-          child: Text(
-            'tumuhaise',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 40,
-              fontWeight: FontWeight.w700,
-            ),
           ),
         ),
       ),
