@@ -11,6 +11,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import '../widgets/community_ui.dart';
+import '../theme/app_theme.dart';
 import '../models/chat_models.dart';
 import '../repositories/chat_repository.dart';
 import '../services/auth_service.dart';
@@ -250,21 +252,27 @@ class _ChatMessagesScreenState extends State<ChatMessagesScreen> {
   void _showMediaOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      showDragHandle: true,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.image),
-              title: const Text('Send Photo'),
+              leading: const IconBadge(icon: Icons.photo_outlined, size: 40),
+              title: const Text('Photo'),
+              subtitle: const Text('Choose from your gallery'),
               onTap: () {
                 Navigator.pop(context);
                 _sendImage();
               },
             ),
             ListTile(
-              leading: const Icon(Icons.location_on),
-              title: const Text('Send Location'),
+              leading: const IconBadge(
+                icon: Icons.location_on_outlined,
+                size: 40,
+              ),
+              title: const Text('My location'),
+              subtitle: const Text('Share where you are right now'),
               onTap: () {
                 Navigator.pop(context);
                 _sendLocation();
@@ -394,49 +402,49 @@ class _ChatMessagesScreenState extends State<ChatMessagesScreen> {
 
             return Scaffold(
               appBar: AppBar(
-                title: Text(
-                  roomTitle,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(42),
-                  child: InkWell(
-                    onTap: () => _openChatSettings(room),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(
-                            color: Theme.of(
-                              context,
-                            ).dividerColor.withValues(alpha: 0.35),
-                          ),
-                          bottom: BorderSide(
-                            color: Theme.of(
-                              context,
-                            ).dividerColor.withValues(alpha: 0.35),
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        children: const [
-                          Icon(Icons.tune, size: 18),
-                          SizedBox(width: 8),
-                          Text('Chat settings'),
-                          Spacer(),
-                          Icon(Icons.chevron_right),
-                        ],
+                titleSpacing: 0,
+                title: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: room.isGroup
+                          ? AppColors.hero
+                          : AppColors.watchDim,
+                      child: room.isGroup
+                          ? Icon(
+                              Icons.groups_rounded,
+                              size: 20,
+                              color: AppColors.accent,
+                            )
+                          : Text(
+                              roomTitle.isEmpty
+                                  ? '?'
+                                  : roomTitle[0].toUpperCase(),
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        roomTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
-                  ),
+                  ],
                 ),
+                actions: [
+                  IconButton(
+                    tooltip: 'Chat settings',
+                    icon: const Icon(Icons.tune_rounded),
+                    onPressed: () => _openChatSettings(room),
+                  ),
+                  const SizedBox(width: 4),
+                ],
               ),
               body: Container(
                 decoration: backgroundPreset.decoration(),
@@ -454,14 +462,10 @@ class _ChatMessagesScreenState extends State<ChatMessagesScreen> {
                           }
 
                           if (snapshot.hasError) {
-                            return Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Text(
-                                  'Could not load messages: ${snapshot.error}',
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
+                            return const EmptyState(
+                              icon: Icons.wifi_off_rounded,
+                              title: 'Could not load messages',
+                              message: 'Check your connection and try again.',
                             );
                           }
 
@@ -743,9 +747,9 @@ class _LocationMessageMap extends StatelessWidget {
                     point: point,
                     width: 42,
                     height: 42,
-                    child: const Icon(
+                    child: Icon(
                       Icons.location_pin,
-                      color: Colors.red,
+                      color: AppColors.alert,
                       size: 38,
                     ),
                   ),
@@ -1029,7 +1033,7 @@ class _VoiceNoteRecorderSheetState extends State<_VoiceNoteRecorderSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Voice Note', style: Theme.of(context).textTheme.titleLarge),
+            Text('Voice note', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 10),
             Text(
               _isRecording
@@ -1134,8 +1138,11 @@ class _MessageInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
       child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1144,29 +1151,50 @@ class _MessageInput extends StatelessWidget {
             Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.add),
+                  tooltip: 'Attach',
+                  icon: const Icon(Icons.add_circle_outline_rounded),
                   onPressed: onMediaPressed,
                 ),
                 Expanded(
                   child: TextField(
                     controller: controller,
-                    decoration: const InputDecoration(
-                      hintText: 'Type a message...',
+                    minLines: 1,
+                    maxLines: 5,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: 'Message',
+                      fillColor: AppColors.canvas,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(30)),
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
                       ),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide(color: AppColors.primary),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     onSubmitted: (_) => onSend(),
                   ),
                 ),
-                const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.mic),
+                  tooltip: 'Voice note',
+                  icon: const Icon(Icons.mic_none_rounded),
                   onPressed: onMicPressed,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: AppColors.primary,
                 ),
-                IconButton.filled(icon: Icon(sendIcon), onPressed: onSend),
+                IconButton.filled(
+                  tooltip: 'Send',
+                  icon: Icon(sendIcon),
+                  onPressed: onSend,
+                ),
               ],
             ),
           ],

@@ -49,37 +49,37 @@ class _FeedbackSupportScreenState extends State<FeedbackSupportScreen> {
         ).showSnackBar(SnackBar(content: Text('Error sending feedback: $e')));
       }
     } finally {
-      setState(() => _isSubmitting = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Feedback & Support')),
+      appBar: AppBar(title: const Text('Feedback & support')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const PageIntro(
-              title: 'We’re listening.',
-              subtitle: 'Share your feedback or report an issue with the app.',
-              eyebrow: 'Feedback & Support',
-              icon: Icons.support_agent_rounded,
+              'Tell us what is working, what is not, or report a problem '
+              'with the app. We read every message.',
             ),
             TextField(
               controller: _feedbackController,
-              maxLines: 5,
+              maxLines: 6,
               decoration: const InputDecoration(
-                hintText: 'Enter your feedback here...',
+                hintText: 'What would you like to tell us?',
+                alignLabelWithHint: true,
               ),
             ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _isSubmitting ? null : _submitFeedback,
               child: _isSubmitting
-                  ? const CircularProgressIndicator()
-                  : const Text('Submit Feedback'),
+                  ? const ButtonSpinner()
+                  : const Text('Send feedback'),
             ),
           ],
         ),

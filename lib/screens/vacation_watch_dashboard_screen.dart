@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../widgets/community_ui.dart';
 import '../models/vacation_watch.dart';
 import '../repositories/vacation_watch_repository.dart';
 import '../services/auth_service.dart';
@@ -22,9 +23,12 @@ class VacationWatchDashboardScreen extends StatelessWidget {
     final currentUserId = authService.currentUser?.uid ?? '';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Watch Dashboard')),
+      appBar: AppBar(title: const Text('Trip dashboard')),
       body: currentUserId.isEmpty
-          ? const Center(child: Text('Sign in to see your watch dashboard.'))
+          ? const EmptyState(
+              icon: Icons.lock_outline_rounded,
+              title: 'Sign in to see your trips',
+            )
           : StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
               stream: FirebaseFirestore.instance
                   .collection('users')
@@ -40,20 +44,19 @@ class VacationWatchDashboardScreen extends StatelessWidget {
                   stream: repository.watchOwnedBy(currentUserId),
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            'Could not load your watch dashboard: ${snapshot.error}',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
+                      return const EmptyState(
+                        icon: Icons.wifi_off_rounded,
+                        title: 'Could not load your trips',
+                        message: 'Check your connection and try again.',
                       );
                     }
 
                     if (snapshot.connectionState == ConnectionState.waiting &&
                         !snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: SkeletonBox(height: 220, radius: 22),
+                      );
                     }
 
                     final watches = snapshot.data ?? const <VacationWatch>[];
@@ -64,8 +67,8 @@ class VacationWatchDashboardScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppColors.ink, Color(0xFF245346)],
+                            gradient: LinearGradient(
+                              colors: [AppColors.hero, AppColors.heroAlt],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -75,43 +78,53 @@ class VacationWatchDashboardScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Your Watch Center',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineMedium
-                                    ?.copyWith(color: Colors.white),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Karma earned: $karmaPoints',
-                                style: Theme.of(context).textTheme.bodyLarge
-                                    ?.copyWith(color: Colors.white),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'See each watch plan, roster coverage, and the activity trail in a full view.',
-                                style: Theme.of(context).textTheme.bodyMedium
+                                'KARMA EARNED',
+                                style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.84,
-                                      ),
+                                      color: AppColors.heroMuted,
+                                      letterSpacing: 1.2,
+                                      fontWeight: FontWeight.w700,
                                     ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.star_rounded,
+                                    color: AppColors.accent,
+                                    size: 30,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '$karmaPoints',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium
+                                        ?.copyWith(
+                                          color: Colors.white,
+                                          fontSize: 34,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Every trip, who is covering which day, and '
+                                'what they reported.',
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: AppColors.heroMuted),
                               ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 18),
                         if (watches.isEmpty)
-                          Container(
-                            padding: const EdgeInsets.all(18),
-                            decoration: BoxDecoration(
-                              color: AppColors.card,
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: const Text(
-                              'No vacation watch plans yet. Create one from the main Vacation Watch screen.',
-                            ),
+                          const EmptyState(
+                            icon: Icons.cottage_outlined,
+                            title: 'No trips planned',
+                            message:
+                                'Plan a trip from Vacation watch and it will '
+                                'appear here.',
                           )
                         else
                           ...watches.map(
@@ -196,7 +209,7 @@ class _DashboardWatchCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    watch.status.name,
+                    watch.status.label,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: tone,
                       fontWeight: FontWeight.w700,
@@ -263,7 +276,7 @@ class _DashboardWatchCard extends StatelessWidget {
                         '${DateFormat('EEE, MMM d').format(shift.startsAt)} • ${shift.label}',
                       ),
                     ),
-                    Text(shift.watcherName ?? shift.status.name),
+                    Text(shift.watcherName ?? shift.status.label),
                   ],
                 ),
               ),
@@ -308,7 +321,7 @@ class _DashboardWatchCard extends StatelessWidget {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      '${item.actorName} • ${item.type.name}',
+                                      '${item.actorName} · ${item.type.label}',
                                       style: Theme.of(
                                         context,
                                       ).textTheme.labelLarge,
@@ -331,7 +344,7 @@ class _DashboardWatchCard extends StatelessWidget {
                               ],
                               if (item.vibe != null) ...[
                                 const SizedBox(height: 6),
-                                Text('Vibe: ${item.vibe!.name}'),
+                                Text('Vibe: ${item.vibe!.label}'),
                               ],
                             ],
                           ),

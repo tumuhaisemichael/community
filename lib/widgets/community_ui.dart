@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/community_post.dart';
 import '../theme/app_theme.dart';
 
 /// Small entrance motion, disabled when the system requests reduced motion.
@@ -27,72 +28,90 @@ class Reveal extends StatelessWidget {
 }
 
 class IconBadge extends StatelessWidget {
-  const IconBadge({
-    super.key,
-    required this.icon,
-    this.color = AppColors.watch,
-    this.size = 46,
-  });
+  const IconBadge({super.key, required this.icon, this.color, this.size = 46});
   final IconData icon;
-  final Color color;
+  final Color? color;
   final double size;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.09),
-      borderRadius: BorderRadius.circular(size * .32),
-    ),
-    child: Icon(icon, color: color, size: size * .48),
+  Widget build(BuildContext context) {
+    final tint = color ?? AppColors.watch;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: AppColors.isDark ? .18 : .09),
+        borderRadius: BorderRadius.circular(size * .32),
+      ),
+      child: Icon(icon, color: tint, size: size * .48),
+    );
+  }
+}
+
+/// One or two lines under the app bar that say what a screen is for.
+class PageIntro extends StatelessWidget {
+  const PageIntro(this.text, {super.key});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 4, bottom: 20),
+    child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
   );
 }
 
-class PageIntro extends StatelessWidget {
-  const PageIntro({
+/// Friendly placeholder for lists with nothing in them (or that failed).
+class EmptyState extends StatelessWidget {
+  const EmptyState({
     super.key,
+    required this.icon,
     required this.title,
-    required this.subtitle,
-    this.eyebrow,
-    this.icon = Icons.blur_on_rounded,
+    this.message,
+    this.action,
   });
-  final String title;
-  final String subtitle;
-  final String? eyebrow;
   final IconData icon;
+  final String title;
+  final String? message;
+  final Widget? action;
 
   @override
-  Widget build(BuildContext context) => Reveal(
-    child: Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              IconBadge(icon: icon, size: 38),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  (eyebrow ?? 'Community').toUpperCase(),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    letterSpacing: 2,
-                    color: AppColors.watch,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.watchDim,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 32, color: AppColors.primary),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: textTheme.titleMedium,
+            ),
+            if (message != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                message!,
+                textAlign: TextAlign.center,
+                style: textTheme.bodyMedium,
               ),
             ],
-          ),
-          const SizedBox(height: 18),
-          Text(title, style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 8),
-          Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
-        ],
+            if (action != null) ...[const SizedBox(height: 16), action!],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class SectionHeading extends StatelessWidget {
@@ -136,14 +155,14 @@ class ActionTile extends StatefulWidget {
     required this.subtitle,
     required this.icon,
     required this.onTap,
-    this.color = AppColors.watch,
+    this.color,
     this.compact = false,
   });
   final String title;
   final String subtitle;
   final IconData icon;
   final VoidCallback onTap;
-  final Color color;
+  final Color? color;
   final bool compact;
   @override
   State<ActionTile> createState() => _ActionTileState();
@@ -178,7 +197,7 @@ class _ActionTileState extends State<ActionTile> {
           borderRadius: BorderRadius.circular(22),
           side: BorderSide(
             color: _hovered
-                ? widget.color.withValues(alpha: .4)
+                ? (widget.color ?? AppColors.watch).withValues(alpha: .4)
                 : AppColors.border,
           ),
         ),
@@ -196,7 +215,7 @@ class _ActionTileState extends State<ActionTile> {
                   children: [
                     IconBadge(
                       icon: widget.icon,
-                      color: widget.color,
+                      color: (widget.color ?? AppColors.watch),
                       size: widget.compact ? 36 : 44,
                     ),
                     const Spacer(),
@@ -241,7 +260,7 @@ class CommunityHero extends StatelessWidget {
     child: Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: AppColors.ink,
+        color: AppColors.hero,
         borderRadius: BorderRadius.circular(28),
       ),
       child: Stack(
@@ -287,9 +306,9 @@ class CommunityHero extends StatelessWidget {
               children: [
                 Text(
                   greeting,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFFC7D9CE),
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppColors.heroMuted),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -319,4 +338,353 @@ class CommunityHero extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Single source of truth for incident severity colours.
+Color severityColor(PostSeverity severity) {
+  switch (severity) {
+    case PostSeverity.low:
+      return AppColors.sevLow;
+    case PostSeverity.medium:
+      return AppColors.sevMedium;
+    case PostSeverity.high:
+      return AppColors.sevHigh;
+    case PostSeverity.critical:
+      return AppColors.sevCritical;
+  }
+}
+
+/// Pulsing grey block used as a loading placeholder.
+class SkeletonBox extends StatefulWidget {
+  const SkeletonBox({
+    super.key,
+    this.width = double.infinity,
+    required this.height,
+    this.radius = 12,
+  });
+  final double width;
+  final double height;
+  final double radius;
+
+  @override
+  State<SkeletonBox> createState() => _SkeletonBoxState();
+}
+
+class _SkeletonBoxState extends State<SkeletonBox>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final box = Container(
+      width: widget.width,
+      height: widget.height,
+      decoration: BoxDecoration(
+        color: AppColors.border,
+        borderRadius: BorderRadius.circular(widget.radius),
+      ),
+    );
+    if (MediaQuery.disableAnimationsOf(context)) return box;
+    return FadeTransition(
+      opacity: Tween<double>(begin: .45, end: 1).animate(_controller),
+      child: box,
+    );
+  }
+}
+
+/// Placeholder rows shaped like list items (avatar + two lines of text).
+class SkeletonList extends StatelessWidget {
+  const SkeletonList({super.key, this.count = 5, this.padding});
+  final int count;
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) => ListView.separated(
+    padding: padding ?? const EdgeInsets.fromLTRB(20, 12, 20, 24),
+    physics: const NeverScrollableScrollPhysics(),
+    itemCount: count,
+    separatorBuilder: (_, _) => const SizedBox(height: 18),
+    itemBuilder: (_, index) => Semantics(
+      label: index == 0 ? 'Loading' : null,
+      child: Row(
+        children: [
+          const SkeletonBox(width: 46, height: 46, radius: 23),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonBox(width: 120.0 + (index % 3) * 40, height: 13),
+                const SizedBox(height: 8),
+                const SkeletonBox(height: 11),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Emergency button that sends only after being held for [holdDuration].
+///
+/// A plain tap calls [onTap] instead (used to show a confirmation dialog), so
+/// screen-reader users and anyone who can't long-press still have a path.
+class SosHoldButton extends StatefulWidget {
+  const SosHoldButton({
+    super.key,
+    required this.onTriggered,
+    required this.onTap,
+    this.holdDuration = const Duration(seconds: 2),
+  });
+  final VoidCallback onTriggered;
+  final VoidCallback onTap;
+  final Duration holdDuration;
+
+  @override
+  State<SosHoldButton> createState() => _SosHoldButtonState();
+}
+
+class _SosHoldButtonState extends State<SosHoldButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _hold = AnimationController(
+    vsync: this,
+    duration: widget.holdDuration,
+  )..addStatusListener(_onStatus);
+
+  void _onStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      _hold.value = 0;
+      widget.onTriggered();
+    }
+  }
+
+  @override
+  void dispose() {
+    _hold.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Send SOS alert',
+      hint: 'Double tap to confirm',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onLongPressStart: (_) => _hold.forward(from: 0),
+        onLongPressEnd: (_) {
+          if (!_hold.isCompleted) _hold.reverse();
+        },
+        onLongPressCancel: () => _hold.reverse(),
+        child: AnimatedBuilder(
+          animation: _hold,
+          builder: (context, _) {
+            final holding = _hold.value > 0;
+            return Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: AppColors.alert,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.alert.withValues(alpha: .35),
+                    blurRadius: 22,
+                    offset: const Offset(0, 10),
+                    spreadRadius: -8,
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: _hold.value,
+                      child: ColoredBox(
+                        color: Colors.black.withValues(alpha: .18),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 14, 18, 14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withValues(alpha: .18),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: .6),
+                              width: 2,
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'SOS',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                              letterSpacing: .6,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                holding
+                                    ? 'Keep holding…'
+                                    : 'Hold 2 seconds to send SOS',
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                    ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Posts an urgent alert with your location',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Colors.white.withValues(
+                                        alpha: .88,
+                                      ),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+IconData categoryIcon(PostCategory category) {
+  switch (category) {
+    case PostCategory.theft:
+      return Icons.lock_open_rounded;
+    case PostCategory.assault:
+      return Icons.back_hand_outlined;
+    case PostCategory.suspiciousPerson:
+      return Icons.person_search_outlined;
+    case PostCategory.vandalism:
+      return Icons.broken_image_outlined;
+    case PostCategory.fire:
+      return Icons.local_fire_department_outlined;
+    case PostCategory.medical:
+      return Icons.medical_services_outlined;
+    case PostCategory.accident:
+      return Icons.car_crash_outlined;
+    case PostCategory.harassment:
+      return Icons.record_voice_over_outlined;
+    case PostCategory.lostChild:
+      return Icons.child_care_outlined;
+    case PostCategory.vacationWatch:
+      return Icons.cottage_outlined;
+    case PostCategory.general:
+      return Icons.campaign_outlined;
+    case PostCategory.other:
+      return Icons.report_gmailerrorred_rounded;
+  }
+}
+
+/// Small spinner sized to sit inside a filled button while it is busy.
+class ButtonSpinner extends StatelessWidget {
+  const ButtonSpinner({super.key});
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: 22,
+    child: CircularProgressIndicator(
+      strokeWidth: 2.5,
+      color: AppColors.onPrimary,
+    ),
+  );
+}
+
+/// Rounded group of settings rows, like a section on iOS/Android settings.
+class SettingsGroup extends StatelessWidget {
+  const SettingsGroup({super.key, required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: AppColors.card,
+    clipBehavior: Clip.antiAlias,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+      side: BorderSide(color: AppColors.border),
+    ),
+    child: Column(
+      children: [
+        for (var i = 0; i < children.length; i++) ...[
+          if (i > 0) Divider(height: 1, indent: 16, endIndent: 16),
+          children[i],
+        ],
+      ],
+    ),
+  );
+}
+
+/// Small rounded label for a state ("Active", "Urgent", "3 open days").
+class StatusPill extends StatelessWidget {
+  const StatusPill({super.key, required this.label, this.color, this.icon});
+  final String label;
+  final Color? color;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = color ?? AppColors.primary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: AppColors.isDark ? .22 : .12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: tint),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              color: AppColors.ink,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

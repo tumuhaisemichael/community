@@ -7,6 +7,7 @@ import '../repositories/post_repository.dart';
 import '../screens/post_location_screen.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import 'community_ui.dart';
 
 class PostCard extends StatefulWidget {
   const PostCard({
@@ -149,63 +150,27 @@ class _PostCardState extends State<PostCard> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Color _severityColor() {
-    switch (post.severity) {
-      case PostSeverity.low:
-        return AppColors.watch;
-      case PostSeverity.medium:
-        return const Color(0xFFD98924);
-      case PostSeverity.high:
-        return AppColors.alert;
-      case PostSeverity.critical:
-        return const Color(0xFF7A3E9D);
-    }
-  }
+  Color _severityColor() => severityColor(post.severity);
 
-  String _severityLabel() {
-    switch (post.severity) {
-      case PostSeverity.low:
-        return 'Routine';
-      case PostSeverity.medium:
-        return 'Watch';
-      case PostSeverity.high:
-        return 'Urgent';
-      case PostSeverity.critical:
-        return 'Critical';
-    }
-  }
+  String _severityLabel() => post.severity.label;
 
-  String _categoryLabel() {
-    switch (post.category) {
-      case PostCategory.suspiciousPerson:
-        return 'Suspicious Person';
-      case PostCategory.lostChild:
-        return 'Lost Child';
-      case PostCategory.vacationWatch:
-        return 'Vacation Watch';
-      default:
-        final raw = post.category.name;
-        return raw.isEmpty
-            ? 'General'
-            : '${raw[0].toUpperCase()}${raw.substring(1)}';
-    }
-  }
+  String _categoryLabel() => post.category.label;
 
   @override
   Widget build(BuildContext context) {
-    final createdAt = DateFormat('MMM d • HH:mm').format(post.createdAt);
+    final createdAt = DateFormat('d MMM · HH:mm').format(post.createdAt);
     final severityColor = _severityColor();
     final isLiked = post.isLikedBy(_currentUserId);
     final isFlaggedByUser = post.isFlaggedBy(_currentUserId);
     final hasLocation = post.latitude != null && post.longitude != null;
-    final cardColor = post.flags > 0 ? const Color(0xFFFFF7F4) : AppColors.card;
+    final cardColor = post.flags > 0 ? AppColors.flaggedCard : AppColors.card;
     final borderColor = post.flags > 0 ? AppColors.alert : AppColors.border;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: cardColor,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         side: BorderSide(color: borderColor, width: post.flags > 0 ? 1.4 : 1),
       ),
       child: Padding(
@@ -254,125 +219,110 @@ class _PostCardState extends State<PostCard> {
                     ),
                   ),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: severityColor.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      alignment: Alignment.center,
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppColors.watchDim,
                       child: Text(
                         post.authorName.isEmpty
                             ? '?'
                             : post.authorName[0].toUpperCase(),
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleMedium?.copyWith(color: severityColor),
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            post.authorName,
-                            style: Theme.of(context).textTheme.titleMedium,
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  post.authorName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                ),
+                              ),
+                              if (post.isVerified) ...[
+                                const SizedBox(width: 4),
+                                Tooltip(
+                                  message: 'Verified by an admin',
+                                  child: Icon(
+                                    Icons.verified_rounded,
+                                    size: 16,
+                                    color: AppColors.watch,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                          const SizedBox(height: 5),
                           Text(
                             createdAt,
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _MetaBadge(
-                                icon: Icons.priority_high_rounded,
-                                label: _severityLabel(),
-                                tint: severityColor,
-                              ),
-                              if (post.category != PostCategory.general)
-                                _MetaBadge(
-                                  icon: Icons.sell_outlined,
-                                  label: _categoryLabel(),
-                                  tint: AppColors.ink,
-                                ),
-                              if (post.isVerified)
-                                const _MetaBadge(
-                                  icon: Icons.verified_rounded,
-                                  label: 'Admin verified',
-                                  tint: AppColors.watch,
-                                ),
-                              if (hasLocation)
-                                const _MetaBadge(
-                                  icon: Icons.location_on_outlined,
-                                  label: 'Pinned location',
-                                  tint: AppColors.safe,
-                                ),
-                            ],
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
                       ),
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.canvas,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: PopupMenuButton<String>(
-                        tooltip: 'More options',
-                        icon: const Icon(Icons.more_horiz_rounded, size: 20),
-                        onSelected: (value) {
-                          if (value == 'flag') {
-                            _toggleFlag();
-                          } else if (value == 'verify') {
-                            _toggleVerification();
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          PopupMenuItem(
-                            value: 'flag',
-                            child: Text(
-                              isFlaggedByUser
-                                  ? 'Remove fake flag'
-                                  : 'Flag as fake',
-                            ),
+                    PopupMenuButton<String>(
+                      tooltip: 'More options',
+                      icon: const Icon(Icons.more_horiz_rounded, size: 20),
+                      onSelected: (value) {
+                        if (value == 'flag') {
+                          _toggleFlag();
+                        } else if (value == 'verify') {
+                          _toggleVerification();
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        PopupMenuItem(
+                          value: 'flag',
+                          child: Text(
+                            isFlaggedByUser
+                                ? 'Remove fake flag'
+                                : 'Flag as fake',
                           ),
-                          PopupMenuItem(
-                            value: 'verify',
-                            child: Text(
-                              post.isVerified
-                                  ? 'Remove admin tag'
-                                  : 'Verify (Admin)',
-                            ),
+                        ),
+                        PopupMenuItem(
+                          value: 'verify',
+                          child: Text(
+                            post.isVerified
+                                ? 'Remove admin tag'
+                                : 'Verify (admin)',
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Text(
-                    post.content,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyLarge?.copyWith(color: AppColors.ink),
-                  ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    StatusPill(
+                      label: _severityLabel(),
+                      color: severityColor,
+                      icon: Icons.circle,
+                    ),
+                    if (post.category != PostCategory.general)
+                      StatusPill(
+                        label: _categoryLabel(),
+                        color: AppColors.mutedText,
+                        icon: categoryIcon(post.category),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  post.content,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(color: AppColors.ink),
                 ),
                 if (post.mediaUrls.isNotEmpty) ...[
                   const SizedBox(height: 14),
@@ -405,40 +355,44 @@ class _PostCardState extends State<PostCard> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
+                const SizedBox(height: 8),
+                Divider(height: 16, color: AppColors.border),
+                Row(
                   children: [
                     _ActionPill(
                       icon: isLiked
                           ? Icons.favorite_rounded
                           : Icons.favorite_border_rounded,
-                      label: '${post.likes} likes',
+                      label: '${post.likes}',
+                      semanticLabel: isLiked ? 'Unlike' : 'Like',
                       onTap: _toggleLike,
-                      foreground: isLiked ? AppColors.alert : AppColors.ink,
-                      background: isLiked
-                          ? AppColors.alertDim
-                          : AppColors.canvas,
+                      foreground: isLiked
+                          ? AppColors.alert
+                          : AppColors.mutedText,
+                      background: Colors.transparent,
                     ),
                     _ActionPill(
                       icon: _showComments
                           ? Icons.chat_bubble_rounded
                           : Icons.chat_bubble_outline_rounded,
-                      label: 'Comments (${comments.length})',
+                      label: '${comments.length}',
+                      semanticLabel: 'Comments',
                       onTap: () {
                         setState(() => _showComments = !_showComments);
                       },
-                      foreground: AppColors.watch,
-                      background: AppColors.watchDim,
+                      foreground: _showComments
+                          ? AppColors.primary
+                          : AppColors.mutedText,
+                      background: Colors.transparent,
                     ),
+                    const Spacer(),
                     if (hasLocation)
                       _ActionPill(
                         icon: Icons.location_on_outlined,
-                        label: 'View location',
+                        label: 'Location',
                         onTap: _showLocation,
-                        foreground: AppColors.safe,
-                        background: AppColors.safeDim,
+                        foreground: AppColors.primary,
+                        background: Colors.transparent,
                       ),
                   ],
                 ),
@@ -457,7 +411,7 @@ class _PostCardState extends State<PostCard> {
                         Row(
                           children: [
                             Text(
-                              'Discussion',
+                              'Replies',
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             const Spacer(),
@@ -472,17 +426,15 @@ class _PostCardState extends State<PostCard> {
                                 ConnectionState.waiting &&
                             comments.isEmpty)
                           const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: SkeletonBox(height: 40),
                           )
                         else if (comments.isEmpty)
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 8),
                             child: Align(
                               alignment: Alignment.centerLeft,
-                              child: Text(
-                                'No comments yet. Start the conversation.',
-                              ),
+                              child: Text('No replies yet.'),
                             ),
                           )
                         else
@@ -502,8 +454,7 @@ class _PostCardState extends State<PostCard> {
                                 minLines: 1,
                                 maxLines: 3,
                                 decoration: const InputDecoration(
-                                  hintText: 'Add your reply...',
-                                  border: OutlineInputBorder(),
+                                  hintText: 'Write a reply',
                                 ),
                               ),
                             ),
@@ -513,19 +464,12 @@ class _PostCardState extends State<PostCard> {
                                   ? null
                                   : _submitComment,
                               style: IconButton.styleFrom(
-                                backgroundColor: AppColors.ink,
-                                foregroundColor: Colors.white,
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: AppColors.onPrimary,
                                 minimumSize: const Size(48, 48),
                               ),
                               icon: _isSendingComment
-                                  ? const SizedBox(
-                                      height: 18,
-                                      width: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
+                                  ? const ButtonSpinner()
                                   : const Icon(Icons.send_rounded),
                             ),
                           ],
@@ -543,44 +487,6 @@ class _PostCardState extends State<PostCard> {
   }
 }
 
-class _MetaBadge extends StatelessWidget {
-  const _MetaBadge({
-    required this.icon,
-    required this.label,
-    required this.tint,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color tint;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: tint.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: tint.withValues(alpha: 0.22)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: tint),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: tint,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _ActionPill extends StatelessWidget {
   const _ActionPill({
     required this.icon,
@@ -588,6 +494,7 @@ class _ActionPill extends StatelessWidget {
     required this.onTap,
     required this.foreground,
     required this.background,
+    this.semanticLabel,
   });
 
   final IconData icon;
@@ -595,31 +502,36 @@ class _ActionPill extends StatelessWidget {
   final VoidCallback onTap;
   final Color foreground;
   final Color background;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Ink(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: foreground.withValues(alpha: 0.14)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: foreground),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.labelLarge?.copyWith(color: foreground),
-            ),
-          ],
+    return Semantics(
+      button: true,
+      label: semanticLabel == null ? null : '$semanticLabel, $label',
+      excludeSemantics: semanticLabel != null,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: foreground),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelLarge?.copyWith(color: foreground),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -637,7 +549,7 @@ class _CommentBubble extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),

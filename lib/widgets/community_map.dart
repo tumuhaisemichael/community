@@ -8,12 +8,14 @@ class CommunityMap extends StatelessWidget {
     super.key,
     required this.options,
     required this.children,
+    this.mapController,
   });
   final MapOptions options;
+  final MapController? mapController;
   final List<Widget> children;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+    padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
     child: DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
@@ -21,7 +23,11 @@ class CommunityMap extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
-        child: FlutterMap(options: options, children: children),
+        child: FlutterMap(
+          mapController: mapController,
+          options: options,
+          children: children,
+        ),
       ),
     ),
   );

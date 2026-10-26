@@ -64,28 +64,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Profile')),
+      appBar: AppBar(title: const Text('Edit profile')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const PageIntro(
-              title: 'Make yourself at home.',
-              subtitle: 'Help your neighbors recognize you.',
-              icon: Icons.person_outline_rounded,
-              eyebrow: 'Your profile',
+              'Use the name your neighbours know you by. It appears on your '
+              'reports and messages.',
             ),
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Full Name'),
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: 'Full name'),
             ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _isLoading ? null : _updateProfile,
               child: _isLoading
-                  ? const CircularProgressIndicator()
-                  : const Text('Save Changes'),
+                  ? const ButtonSpinner()
+                  : const Text('Save changes'),
             ),
           ],
         ),

@@ -81,7 +81,7 @@ class AroundScreen extends StatelessWidget {
                   ),
                 ),
                 if (isVerified)
-                  const Icon(Icons.verified, color: AppColors.watch, size: 20),
+                  Icon(Icons.verified, color: AppColors.watch, size: 20),
               ],
             ),
             const SizedBox(height: 16),
@@ -104,7 +104,7 @@ class AroundScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     if (_mapTilerKey.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Around')),
+        appBar: AppBar(title: const Text('Map')),
         body: const Center(
           child: Padding(
             padding: EdgeInsets.all(24),
@@ -118,13 +118,13 @@ class AroundScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Around')),
+      appBar: AppBar(title: const Text('Map')),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: FirebaseFirestore.instance.collection('users').snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          // Show the map straight away; neighbours appear when they load.
+          final loadingUsers =
+              snapshot.connectionState == ConnectionState.waiting;
 
           if (snapshot.hasError) {
             return Center(
@@ -263,7 +263,10 @@ class AroundScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${nearbyUsers.length} people within ${_nearbyRadiusKm.toStringAsFixed(0)} km',
+                      loadingUsers
+                          ? 'Finding neighbours…'
+                          : '${nearbyUsers.length} people within ${_nearbyRadiusKm.toStringAsFixed(0)} km',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/beacon_mark.dart';
 import '../widgets/community_ui.dart';
 
 import '../repositories/post_repository.dart';
@@ -50,27 +51,25 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.ink,
-      body: const Center(
+      backgroundColor: AppColors.hero,
+      body: Center(
         child: Reveal(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.hub_outlined, color: AppColors.lime, size: 64),
-              SizedBox(height: 24),
+              BeaconMark(size: 76, color: AppColors.accent, animate: true),
+              const SizedBox(height: 28),
               Text(
                 'Community',
-                style: TextStyle(
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: Colors.white,
                   fontSize: 38,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -1.5,
                 ),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
-                'A little closer. A little safer.',
-                style: TextStyle(color: Color(0xFFC7D9CE), fontSize: 15),
+                'Neighbours looking out for each other.',
+                style: TextStyle(color: AppColors.heroMuted, fontSize: 15),
               ),
             ],
           ),

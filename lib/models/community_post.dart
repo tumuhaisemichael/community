@@ -146,3 +146,36 @@ class PostComment {
     };
   }
 }
+
+extension PostCategoryLabel on PostCategory {
+  String get label {
+    switch (this) {
+      case PostCategory.suspiciousPerson:
+        return 'Suspicious person';
+      case PostCategory.lostChild:
+        return 'Lost child';
+      case PostCategory.vacationWatch:
+        return 'Vacation watch';
+      default:
+        return '${name[0].toUpperCase()}${name.substring(1)}';
+    }
+  }
+}
+
+extension PostSeverityLabel on PostSeverity {
+  String get label {
+    switch (this) {
+      case PostSeverity.low:
+        return 'Routine';
+      case PostSeverity.medium:
+        return 'Watch';
+      case PostSeverity.high:
+        return 'Urgent';
+      case PostSeverity.critical:
+        return 'Critical';
+    }
+  }
+
+  bool get isSerious =>
+      this == PostSeverity.high || this == PostSeverity.critical;
+}

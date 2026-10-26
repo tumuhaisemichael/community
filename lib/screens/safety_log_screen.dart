@@ -20,12 +20,12 @@ class SafetyLogScreen extends StatelessWidget {
     final currentUserId = authService.currentUser?.uid ?? '';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Personal Safety Log')),
+      appBar: AppBar(title: const Text('My safety log')),
       body: StreamBuilder<List<CommunityPost>>(
         stream: postRepository.getPostsStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const SkeletonList();
           }
 
           final myPosts =
@@ -35,20 +35,25 @@ class SafetyLogScreen extends StatelessWidget {
               [];
 
           if (myPosts.isEmpty) {
-            return const Center(
-              child: Text('You have not reported any incidents yet.'),
+            return const EmptyState(
+              icon: Icons.edit_note_rounded,
+              title: 'No reports yet',
+              message:
+                  'Incidents you report appear here, so you can keep track of '
+                  'them.',
             );
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
             itemCount: myPosts.length + 1,
             itemBuilder: (context, index) => index == 0
-                ? const PageIntro(
-                    title: 'Your safety journal.',
-                    subtitle: 'A record of the incidents you have shared.',
-                    eyebrow: 'Personal Safety Log',
-                    icon: Icons.history_rounded,
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: PageIntro(
+                      'You have reported ${myPosts.length} '
+                      'incident${myPosts.length == 1 ? '' : 's'}.',
+                    ),
                   )
                 : PostCard(
                     post: myPosts[index - 1],

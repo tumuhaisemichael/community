@@ -10,12 +10,12 @@ class BeaconMark extends StatefulWidget {
   const BeaconMark({
     super.key,
     this.size = 72,
-    this.color = AppColors.ink,
+    this.color,
     this.animate = false,
   });
 
   final double size;
-  final Color color;
+  final Color? color;
   final bool animate;
 
   @override
@@ -42,7 +42,10 @@ class _BeaconMarkState extends State<BeaconMark>
         width: widget.size,
         height: widget.size,
         child: CustomPaint(
-          painter: _BeaconPainter(progress: 0, color: widget.color),
+          painter: _BeaconPainter(
+            progress: 0,
+            color: (widget.color ?? AppColors.ink),
+          ),
         ),
       );
     }
@@ -56,7 +59,7 @@ class _BeaconMarkState extends State<BeaconMark>
           return CustomPaint(
             painter: _BeaconPainter(
               progress: _controller.value,
-              color: widget.color,
+              color: (widget.color ?? AppColors.ink),
             ),
           );
         },

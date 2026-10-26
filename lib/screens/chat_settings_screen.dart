@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../widgets/community_ui.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -175,16 +176,14 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     final currentUserId = currentUser?.uid ?? '';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat Settings')),
+      appBar: AppBar(title: const Text('Chat settings')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
           children: [
             const PageIntro(
-              title: 'Make it feel like you.',
-              subtitle: 'Your profile, conversations, and chat appearance.',
-              eyebrow: 'Chat Settings',
-              icon: Icons.tune_rounded,
+              'Your chat name, how this chat looks, and your other '
+              'conversations.',
             ),
             Card(
               child: Padding(
@@ -215,8 +214,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                               TextField(
                                 controller: _nameController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Your username',
-                                  border: OutlineInputBorder(),
+                                  labelText: 'Your chat name',
                                 ),
                               ),
                               if (currentUser?.email?.trim().isNotEmpty ==
@@ -237,19 +235,13 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                                         ? null
                                         : _saveDisplayName,
                                     child: _isSavingName
-                                        ? const SizedBox(
-                                            height: 16,
-                                            width: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                        : const Text('Save Name'),
+                                        ? const ButtonSpinner()
+                                        : const Text('Save name'),
                                   ),
                                   OutlinedButton.icon(
                                     onPressed: _pickProfilePlaceholder,
                                     icon: const Icon(Icons.add_a_photo),
-                                    label: const Text('Add Photo'),
+                                    label: const Text('Add photo'),
                                   ),
                                 ],
                               ),
@@ -277,7 +269,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Chat Appearance',
+                      'Chat appearance',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 12),
@@ -289,6 +281,10 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                       children: ChatAppearanceCatalog.backgrounds
                           .map(
                             (preset) => ChoiceChip(
+                              avatar: CircleAvatar(
+                                backgroundColor: preset.currentColors.last,
+                              ),
+                              showCheckmark: false,
                               label: Text(preset.label),
                               selected: _selectedBackgroundKey == preset.key,
                               onSelected: (_) {
@@ -309,6 +305,10 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                       children: ChatAppearanceCatalog.bubbleThemes
                           .map(
                             (preset) => ChoiceChip(
+                              avatar: CircleAvatar(
+                                backgroundColor: preset.selfColor,
+                              ),
+                              showCheckmark: false,
                               label: Text(preset.label),
                               selected: _selectedBubbleThemeKey == preset.key,
                               onSelected: (_) {
@@ -325,7 +325,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                       alignment: Alignment.centerLeft,
                       child: FilledButton(
                         onPressed: _saveAppearance,
-                        child: const Text('Apply Theme'),
+                        child: const Text('Apply'),
                       ),
                     ),
                   ],
@@ -340,7 +340,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Your Chats',
+                      'Your chats',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
@@ -373,10 +373,11 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                               if (roomsSnapshot.connectionState ==
                                       ConnectionState.waiting &&
                                   !roomsSnapshot.hasData) {
-                                return const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 24),
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
+                                return const SizedBox(
+                                  height: 200,
+                                  child: SkeletonList(
+                                    count: 3,
+                                    padding: EdgeInsets.symmetric(vertical: 8),
                                   ),
                                 );
                               }
@@ -409,10 +410,12 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                                   return ListTile(
                                     contentPadding: EdgeInsets.zero,
                                     leading: CircleAvatar(
+                                      backgroundColor: AppColors.watchDim,
                                       child: Icon(
                                         room.isGroup
-                                            ? Icons.groups
-                                            : Icons.person,
+                                            ? Icons.groups_rounded
+                                            : Icons.person_rounded,
+                                        color: AppColors.primary,
                                       ),
                                     ),
                                     title: Text(title),
@@ -422,7 +425,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     trailing: isCurrentRoom
-                                        ? const Text('Open')
+                                        ? const StatusPill(label: 'Current')
                                         : const Icon(Icons.chevron_right),
                                     onTap: () => Navigator.pop(context, room),
                                   );

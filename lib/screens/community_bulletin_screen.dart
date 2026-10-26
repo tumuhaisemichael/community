@@ -31,6 +31,7 @@ class _CommunityBulletinScreenState extends State<CommunityBulletinScreen> {
       VacationWatchRepository();
   final _contentController = TextEditingController();
   bool _isSubmitting = false;
+  _Filter _filter = _Filter.all;
 
   @override
   void dispose() {
@@ -115,61 +116,130 @@ class _CommunityBulletinScreenState extends State<CommunityBulletinScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  bool _matchesFilter(CommunityPost post) {
+    switch (_filter) {
+      case _Filter.all:
+        return true;
+      case _Filter.urgent:
+        return post.severity.isSerious;
+      case _Filter.incidents:
+        return post.category != PostCategory.general;
+      case _Filter.announcements:
+        return post.category == PostCategory.general;
+    }
+  }
+
+  Widget _buildComposer() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: AppColors.watchDim,
+            child: Text(
+              _currentUserName[0].toUpperCase(),
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _contentController,
+              minLines: 1,
+              maxLines: 4,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                hintText: 'Share an announcement',
+                filled: false,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+          IconButton.filled(
+            tooltip: 'Post',
+            onPressed: _isSubmitting ? null : _submitPost,
+            icon: const Icon(Icons.send_rounded, size: 20),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildUpdatesTab() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _contentController,
-                  decoration: const InputDecoration(
-                    hintText: 'Share an announcement...',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filled(
-                onPressed: _isSubmitting ? null : _submitPost,
-                icon: const Icon(Icons.send),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: StreamBuilder<List<CommunityPost>>(
-            stream: widget.postRepository.getPostsStream(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
+    return StreamBuilder<List<CommunityPost>>(
+      stream: widget.postRepository.getPostsStream(),
+      builder: (context, snapshot) {
+        final loading = snapshot.connectionState == ConnectionState.waiting;
+        final posts = (snapshot.data ?? []).where(_matchesFilter).toList();
 
-              final posts = snapshot.data ?? [];
-
-              return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                itemCount: posts.length + 1,
-                itemBuilder: (context, index) => index == 0
-                    ? const PageIntro(
-                        title: 'The neighborhood board.',
-                        subtitle:
-                            'Updates, announcements, and neighbors helping neighbors.',
-                        eyebrow: 'Community Bulletin',
-                        icon: Icons.view_agenda_outlined,
-                      )
-                    : PostCard(
-                        post: posts[index - 1],
-                        authService: widget.authService,
-                        postRepository: widget.postRepository,
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          children: [
+            _buildComposer(),
+            const SizedBox(height: 14),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final filter in _Filter.values)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(filter.label),
+                        selected: _filter == filter,
+                        showCheckmark: false,
+                        onSelected: (_) => setState(() => _filter = filter),
                       ),
-              );
-            },
-          ),
-        ),
-      ],
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            if (loading)
+              for (var i = 0; i < 3; i++)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: SkeletonBox(height: 150, radius: 22),
+                )
+            else if (snapshot.hasError)
+              const EmptyState(
+                icon: Icons.wifi_off_rounded,
+                title: 'Could not load updates',
+                message: 'Check your connection and try again.',
+              )
+            else if (posts.isEmpty)
+              EmptyState(
+                icon: Icons.forum_outlined,
+                title: _filter == _Filter.all
+                    ? 'No updates yet'
+                    : 'Nothing in ${_filter.label.toLowerCase()}',
+                message: _filter == _Filter.all
+                    ? 'Share the first announcement with your neighbours.'
+                    : 'Try another filter.',
+              )
+            else
+              for (final post in posts)
+                PostCard(
+                  post: post,
+                  authService: widget.authService,
+                  postRepository: widget.postRepository,
+                ),
+          ],
+        );
+      },
     );
   }
 
@@ -191,7 +261,7 @@ class _CommunityBulletinScreenState extends State<CommunityBulletinScreen> {
 
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const SkeletonList();
         }
 
         final watches = snapshot.data ?? const <VacationWatch>[];
@@ -207,8 +277,8 @@ class _CommunityBulletinScreenState extends State<CommunityBulletinScreen> {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.ink, Color(0xFF245346)],
+                gradient: LinearGradient(
+                  colors: [AppColors.hero, AppColors.heroAlt],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -218,39 +288,41 @@ class _CommunityBulletinScreenState extends State<CommunityBulletinScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Vacation Watch Board',
+                    'Help a neighbour who is away',
                     style: Theme.of(
                       context,
                     ).textTheme.headlineMedium?.copyWith(color: Colors.white),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'This is where neighbors see who is going away, review open coverage days, and claim the exact day they want to help with.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.84),
-                    ),
+                    'Pick a day to check on their home. You earn karma for '
+                    'every day you complete.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: AppColors.heroMuted),
                   ),
                   const SizedBox(height: 14),
-                  FilledButton.tonalIcon(
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.onAccent,
+                      minimumSize: const Size(0, 44),
+                    ),
                     onPressed: _openVacationWatchPlanner,
-                    icon: const Icon(Icons.add_circle_outline),
-                    label: const Text('Create a vacation watch'),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Plan my own trip'),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 18),
             if (bulletinWatches.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: const Text(
-                  'No active vacation watches yet. When someone plans a trip, their coverage days will appear here.',
-                ),
+              const EmptyState(
+                icon: Icons.cottage_outlined,
+                title: 'No one is away right now',
+                message:
+                    'When a neighbour plans a trip, the days they need help '
+                    'with appear here.',
               )
             else
               ...bulletinWatches.map(
@@ -275,11 +347,11 @@ class _CommunityBulletinScreenState extends State<CommunityBulletinScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Community Bulletin'),
+          title: const Text('Bulletin'),
           bottom: const TabBar(
             tabs: [
               Tab(text: 'Updates'),
-              Tab(text: 'Vacation Watch'),
+              Tab(text: 'Vacation watch'),
             ],
           ),
         ),
@@ -323,7 +395,7 @@ class _BulletinVacationCard extends StatelessWidget {
                 label: 'Claimed by',
                 value: shift.watcherName ?? 'Unassigned',
               ),
-              _ShiftInfoRow(label: 'Status', value: shift.status.name),
+              _ShiftInfoRow(label: 'Status', value: shift.status.label),
               _ShiftInfoRow(
                 label: 'Coverage',
                 value: endsAt == null
@@ -396,37 +468,25 @@ class _BulletinVacationCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.watchDim,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '${watch.karmaReward} karma/day',
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
+                StatusPill(
+                  label: '${watch.karmaReward} karma/day',
+                  color: AppColors.amber,
+                  icon: Icons.star_rounded,
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: (isClosed ? AppColors.safeDim : AppColors.watchDim),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                isClosed
-                    ? watch.status.name
-                    : (watch.status == VacationWatchStatus.completed
-                          ? 'reopened'
-                          : watch.status.name),
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
+            StatusPill(
+              label: isClosed
+                  ? watch.status.label
+                  : (watch.status == VacationWatchStatus.completed
+                        ? 'Reopened'
+                        : watch.status.label),
+              color: isClosed
+                  ? AppColors.safe
+                  : watch.status == VacationWatchStatus.alert
+                  ? AppColors.alert
+                  : AppColors.primary,
             ),
             const SizedBox(height: 8),
             Text(watch.address, style: Theme.of(context).textTheme.bodyMedium),
@@ -564,4 +624,14 @@ class _ShiftInfoRow extends StatelessWidget {
       ),
     );
   }
+}
+
+enum _Filter {
+  all('All'),
+  urgent('Urgent'),
+  incidents('Incidents'),
+  announcements('Announcements');
+
+  const _Filter(this.label);
+  final String label;
 }

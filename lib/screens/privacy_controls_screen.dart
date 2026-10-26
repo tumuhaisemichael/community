@@ -17,45 +17,49 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Privacy Controls')),
+      appBar: AppBar(title: const Text('Privacy')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           const PageIntro(
-            title: 'Your space. Your choice.',
-            subtitle:
-                'Choose what information is visible to others in the community.',
-            eyebrow: 'Privacy controls',
-            icon: Icons.lock_outline_rounded,
+            'Choose what other members of the community can see about you.',
           ),
-          SwitchListTile(
-            tileColor: AppColors.card,
-            title: const Text('Show approximate location'),
-            subtitle: const Text('Visible to verified community members'),
-            value: _showLocation,
-            onChanged: (val) => setState(() => _showLocation = val),
+          SettingsGroup(
+            children: [
+              SwitchListTile(
+                title: const Text('Show approximate location'),
+                subtitle: const Text('Visible to verified community members'),
+                value: _showLocation,
+                onChanged: (val) => setState(() => _showLocation = val),
+              ),
+              SwitchListTile(
+                title: const Text('Show email address'),
+                subtitle: const Text('Visible on your community profile'),
+                value: _showEmail,
+                onChanged: (val) => setState(() => _showEmail = val),
+              ),
+              SwitchListTile(
+                title: const Text('Allow direct messages'),
+                subtitle: const Text(
+                  'Neighbours can start a private chat with you',
+                ),
+                value: _allowMessages,
+                onChanged: (val) => setState(() => _allowMessages = val),
+              ),
+            ],
           ),
-          SwitchListTile(
-            tileColor: AppColors.card,
-            title: const Text('Show email address'),
-            subtitle: const Text('Visible on your community profile'),
-            value: _showEmail,
-            onChanged: (val) => setState(() => _showEmail = val),
-          ),
-          SwitchListTile(
-            tileColor: AppColors.card,
-            title: const Text('Allow direct messages'),
-            subtitle: const Text('Neighbors can start a private chat with you'),
-            value: _allowMessages,
-            onChanged: (val) => setState(() => _allowMessages = val),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.block, color: AppColors.alert),
-            title: const Text('Blocked Users'),
-            onTap: () {
-              // Show list of blocked users
-            },
+          const SizedBox(height: 16),
+          SettingsGroup(
+            children: [
+              ListTile(
+                leading: Icon(Icons.block, color: AppColors.alert),
+                title: const Text('Blocked users'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () {
+                  // Show list of blocked users
+                },
+              ),
+            ],
           ),
         ],
       ),

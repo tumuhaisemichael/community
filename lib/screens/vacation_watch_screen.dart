@@ -46,6 +46,7 @@ class _VacationWatchScreenState extends State<VacationWatchScreen> {
   double? _houseLatitude;
   double? _houseLongitude;
   bool _isSubmitting = false;
+  bool _showCreateForm = false;
   bool _isLocatingHouse = false;
   bool _isCheckingArrival = false;
   Timer? _arrivalTimer;
@@ -357,6 +358,7 @@ class _VacationWatchScreenState extends State<VacationWatchScreen> {
         'Vacation watch created. Neighbors can start claiming days.',
       );
       setState(() {
+        _showCreateForm = false;
         _addressController.clear();
         _houseLatitude = null;
         _houseLongitude = null;
@@ -595,11 +597,9 @@ class _VacationWatchScreenState extends State<VacationWatchScreen> {
 
   Widget _buildOwnerTab() {
     if (_currentUserId.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('Sign in to create and manage vacation watches.'),
-        ),
+      return const EmptyState(
+        icon: Icons.lock_outline_rounded,
+        title: 'Sign in to plan a trip',
       );
     }
 
@@ -616,18 +616,18 @@ class _VacationWatchScreenState extends State<VacationWatchScreen> {
           stream: _repository.watchOwnedBy(_currentUserId),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    'Could not load your watch dashboard: ${snapshot.error}',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+              return const EmptyState(
+                icon: Icons.wifi_off_rounded,
+                title: 'Could not load your trips',
+                message: 'Check your connection and try again.',
               );
             }
 
             final watches = snapshot.data ?? const <VacationWatch>[];
+            final loading =
+                snapshot.connectionState == ConnectionState.waiting &&
+                watches.isEmpty;
+            final showForm = _showCreateForm || (!loading && watches.isEmpty);
             _ownedWatches = watches;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _checkArrivalTrigger();
@@ -641,207 +641,23 @@ class _VacationWatchScreenState extends State<VacationWatchScreen> {
                   isCheckingArrival: _isCheckingArrival,
                 ),
                 const SizedBox(height: 18),
-                _SectionCard(
-                  title: 'Create a watch plan',
-                  subtitle:
-                      'Define the house, tasks, and coverage calendar before you leave.',
-                  child: Column(
-                    children: [
-                      SegmentedButton<VacationWatchMode>(
-                        segments: const [
-                          ButtonSegment(
-                            value: VacationWatchMode.neighborly,
-                            label: Text('Neighborly Help'),
-                            icon: Icon(Icons.handshake_outlined),
-                          ),
-                          ButtonSegment(
-                            value: VacationWatchMode.proCare,
-                            label: Text('Pro Care'),
-                            icon: Icon(Icons.work_outline),
-                          ),
-                        ],
-                        selected: {_mode},
-                        onSelectionChanged: (selection) {
-                          setState(() => _mode = selection.first);
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      if (_mode == VacationWatchMode.proCare)
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.watchDim,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: const Text(
-                            'Pro Care works as a manually arranged paid watch for now. Marketplace matching and escrow can come later.',
-                          ),
-                        ),
-                      TextField(
-                        controller: _addressController,
-                        decoration: const InputDecoration(
-                          labelText: 'House address',
-                          hintText: 'Enter the property address',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _pickHouseLocationOnMap,
-                              icon: const Icon(Icons.map_outlined),
-                              label: Text(
-                                _houseLatitude == null
-                                    ? 'Pick on map'
-                                    : 'Repick on map',
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: TextField(
-                              controller: _radiusController,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              decoration: const InputDecoration(
-                                labelText: 'Arrival radius (km)',
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (_houseLatitude != null &&
-                          _houseLongitude != null) ...[
-                        const SizedBox(height: 10),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.watchDim,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Text(
-                            'Pinned house: ${_houseLatitude!.toStringAsFixed(5)}, ${_houseLongitude!.toStringAsFixed(5)}',
-                          ),
-                        ),
-                      ],
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: _isLocatingHouse
-                              ? null
-                              : _useCurrentLocationForHouse,
-                          icon: const Icon(Icons.my_location_outlined),
-                          label: Text(
-                            _isLocatingHouse
-                                ? 'Locating...'
-                                : 'Use current location instead',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _DatePill(
-                              label: 'Start date',
-                              value: _startDate == null
-                                  ? 'Select'
-                                  : DateFormat('MMM d').format(_startDate!),
-                              onTap: () => _pickDate(isStart: true),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _DatePill(
-                              label: 'Return date',
-                              value: _endDate == null
-                                  ? 'Select'
-                                  : DateFormat('MMM d').format(_endDate!),
-                              onTap: () => _pickDate(isStart: false),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _karmaController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Karma reward per completed shift',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Watch zone checklist',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ..._taskCatalog.entries.map((entry) {
-                        final selected = _selectedTasks[entry.key] ?? false;
-                        return SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          value: selected,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedTasks[entry.key] = value;
-                            });
-                          },
-                          title: Text(entry.value.title),
-                          subtitle: Text(entry.value.schedule),
-                        );
-                      }),
-                      const SizedBox(height: 8),
-                      FilledButton.icon(
-                        onPressed: _isSubmitting ? null : _createWatch,
-                        icon: const Icon(Icons.event_available_outlined),
-                        label: Text(
-                          _isSubmitting
-                              ? 'Creating plan...'
-                              : 'Launch vacation watch',
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 22),
+                SectionHeading(
+                  title: 'Planned trips',
+                  action: IconButton(
+                    tooltip: 'Check if I have arrived home',
+                    onPressed: () => _checkArrivalTrigger(showSuccess: true),
+                    icon: const Icon(Icons.radar_outlined),
                   ),
                 ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'My watch dashboard',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: _openDashboard,
-                      icon: const Icon(Icons.open_in_new),
-                      label: const Text('Open full view'),
-                    ),
-                    TextButton.icon(
-                      onPressed: () => _checkArrivalTrigger(showSuccess: true),
-                      icon: const Icon(Icons.radar_outlined),
-                      label: const Text('Check arrival'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                if (snapshot.connectionState == ConnectionState.waiting &&
-                    watches.isEmpty)
-                  const Center(child: CircularProgressIndicator())
+                if (loading)
+                  const SkeletonBox(height: 160, radius: 20)
                 else if (watches.isEmpty)
                   const _FriendlyEmptyState(
-                    title: 'No watch plans yet',
+                    title: 'No trips planned',
                     message:
-                        'Create one above and neighbors will be able to claim daily coverage.',
+                        'Plan a trip below and neighbours can sign up to check '
+                        'on your home each day.',
                   )
                 else
                   ...watches.map(
@@ -855,6 +671,188 @@ class _VacationWatchScreenState extends State<VacationWatchScreen> {
                       activityStream: _repository.watchActivity(watch.id),
                     ),
                   ),
+                const SizedBox(height: 22),
+                if (showForm)
+                  _SectionCard(
+                    title: 'Plan a trip',
+                    subtitle:
+                        'Tell neighbours where your home is, when you are away and '
+                        'what needs doing.',
+                    child: Column(
+                      children: [
+                        SegmentedButton<VacationWatchMode>(
+                          segments: const [
+                            ButtonSegment(
+                              value: VacationWatchMode.neighborly,
+                              label: Text('Neighbours'),
+                              icon: Icon(Icons.handshake_outlined),
+                            ),
+                            ButtonSegment(
+                              value: VacationWatchMode.proCare,
+                              label: Text('Paid carer'),
+                              icon: Icon(Icons.work_outline),
+                            ),
+                          ],
+                          selected: {_mode},
+                          onSelectionChanged: (selection) {
+                            setState(() => _mode = selection.first);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        if (_mode == VacationWatchMode.proCare)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.watchDim,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Text(
+                              'Paid carers are arranged by hand for now. You agree '
+                              'the fee with the carer directly.',
+                            ),
+                          ),
+                        TextField(
+                          controller: _addressController,
+                          decoration: const InputDecoration(
+                            labelText: 'House address',
+                            hintText: 'Enter the property address',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _pickHouseLocationOnMap,
+                                icon: const Icon(Icons.map_outlined),
+                                label: Text(
+                                  _houseLatitude == null
+                                      ? 'Pick on map'
+                                      : 'Repick on map',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: TextField(
+                                controller: _radiusController,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                decoration: const InputDecoration(
+                                  labelText: 'Arrival radius (km)',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_houseLatitude != null &&
+                            _houseLongitude != null) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.watchDim,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Text(
+                              'Pinned house: ${_houseLatitude!.toStringAsFixed(5)}, ${_houseLongitude!.toStringAsFixed(5)}',
+                            ),
+                          ),
+                        ],
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: _isLocatingHouse
+                                ? null
+                                : _useCurrentLocationForHouse,
+                            icon: const Icon(Icons.my_location_outlined),
+                            label: Text(
+                              _isLocatingHouse
+                                  ? 'Locating...'
+                                  : 'Use current location instead',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _DatePill(
+                                label: 'Start date',
+                                value: _startDate == null
+                                    ? 'Select'
+                                    : DateFormat('MMM d').format(_startDate!),
+                                onTap: () => _pickDate(isStart: true),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _DatePill(
+                                label: 'Return date',
+                                value: _endDate == null
+                                    ? 'Select'
+                                    : DateFormat('MMM d').format(_endDate!),
+                                onTap: () => _pickDate(isStart: false),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _karmaController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Karma points per day',
+                            helperText: 'Thank-you points for each day covered',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'What should neighbours do?',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ..._taskCatalog.entries.map((entry) {
+                          final selected = _selectedTasks[entry.key] ?? false;
+                          return SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            value: selected,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedTasks[entry.key] = value;
+                              });
+                            },
+                            title: Text(entry.value.title),
+                            subtitle: Text(entry.value.schedule),
+                          );
+                        }),
+                        const SizedBox(height: 8),
+                        FilledButton.icon(
+                          onPressed: _isSubmitting ? null : _createWatch,
+                          icon: const Icon(Icons.event_available_outlined),
+                          label: Text(
+                            _isSubmitting
+                                ? 'Saving…'
+                                : 'Ask neighbours for help',
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() => _showCreateForm = true),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Plan a new trip'),
+                  ),
               ],
             );
           },
@@ -865,11 +863,9 @@ class _VacationWatchScreenState extends State<VacationWatchScreen> {
 
   Widget _buildCoverageTab() {
     if (_currentUserId.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('Sign in to claim shifts and help with coverage.'),
-        ),
+      return const EmptyState(
+        icon: Icons.lock_outline_rounded,
+        title: 'Sign in to help neighbours',
       );
     }
 
@@ -877,14 +873,10 @@ class _VacationWatchScreenState extends State<VacationWatchScreen> {
       stream: _repository.watchAll(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                'Could not load available watch shifts: ${snapshot.error}',
-                textAlign: TextAlign.center,
-              ),
-            ),
+          return const EmptyState(
+            icon: Icons.wifi_off_rounded,
+            title: 'Could not load open days',
+            message: 'Check your connection and try again.',
           );
         }
 
@@ -922,14 +914,15 @@ class _VacationWatchScreenState extends State<VacationWatchScreen> {
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 120),
           children: [
             _SectionCard(
-              title: 'Your claimed shifts',
+              title: 'Days you are covering',
               subtitle:
-                  'Check in, leave a handoff note, or raise an alert during your assigned days.',
+                  'Check in when you visit, hand off to the next neighbour, '
+                  'or raise an alert.',
               child: myAssigned.isEmpty
                   ? const _FriendlyEmptyState(
-                      title: 'No claimed shifts yet',
+                      title: 'Nothing yet',
                       message:
-                          'Pick an open day below and it will appear here with your daily actions.',
+                          'Pick an open day below and it will show up here.',
                     )
                   : Column(
                       children: myAssigned
@@ -954,14 +947,14 @@ class _VacationWatchScreenState extends State<VacationWatchScreen> {
             ),
             const SizedBox(height: 18),
             _SectionCard(
-              title: 'Vacation board',
-              subtitle:
-                  'See who is away, review their open coverage days, and tap a specific day to help.',
+              title: 'Neighbours who need help',
+              subtitle: 'Tap a day to sign up for it.',
               child: watchBoard.isEmpty
                   ? const _FriendlyEmptyState(
-                      title: 'No active vacation watches right now',
+                      title: 'No one is away right now',
                       message:
-                          'When someone schedules a watch, their trip and open coverage days will show here.',
+                          'When a neighbour plans a trip, their open days '
+                          'appear here.',
                     )
                   : Column(
                       children: watchBoard
@@ -990,18 +983,18 @@ class _VacationWatchScreenState extends State<VacationWatchScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Vacation Watch'),
+          title: const Text('Vacation watch'),
           actions: [
             IconButton(
-              tooltip: 'My watch dashboard',
+              tooltip: 'Trip dashboard',
               onPressed: _openDashboard,
               icon: const Icon(Icons.dashboard_outlined),
             ),
           ],
           bottom: const TabBar(
             tabs: [
-              Tab(text: 'My Watch'),
-              Tab(text: 'Cover Shifts'),
+              Tab(text: 'My trips'),
+              Tab(text: 'Help neighbours'),
             ],
           ),
         ),
@@ -1026,7 +1019,7 @@ class _HeroBanner extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: AppColors.ink,
+          color: AppColors.hero,
           borderRadius: BorderRadius.circular(26),
         ),
         child: Column(
@@ -1034,11 +1027,7 @@ class _HeroBanner extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.cottage_outlined,
-                  color: AppColors.lime,
-                  size: 30,
-                ),
+                Icon(Icons.cottage_outlined, color: AppColors.lime, size: 30),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -1063,7 +1052,7 @@ class _HeroBanner extends StatelessWidget {
               'Plan your coverage, share tasks, and keep up with your home. Arrival monitoring works while this screen is open.',
               style: Theme.of(
                 context,
-              ).textTheme.bodyMedium?.copyWith(color: const Color(0xFFC7D9CE)),
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.heroMuted),
             ),
             const SizedBox(height: 22),
             Container(
@@ -1074,7 +1063,7 @@ class _HeroBanner extends StatelessWidget {
               ),
               child: Text(
                 '$karmaPoints karma earned',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.lime,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1082,7 +1071,7 @@ class _HeroBanner extends StatelessWidget {
             ),
             if (isCheckingArrival) ...[
               const SizedBox(height: 16),
-              const Row(
+              Row(
                 children: [
                   SizedBox(
                     width: 16,
@@ -1205,7 +1194,7 @@ class _FriendlyEmptyState extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(Icons.inventory_2_outlined, color: AppColors.watch),
+          Icon(Icons.event_available_outlined, color: AppColors.primary),
           const SizedBox(height: 10),
           Text(title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 6),
@@ -1285,7 +1274,7 @@ class _OwnerWatchCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    watch.status.name,
+                    watch.status.label,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: statusColor,
                       fontWeight: FontWeight.w700,
@@ -1323,7 +1312,7 @@ class _OwnerWatchCard extends StatelessWidget {
               minHeight: 9,
               borderRadius: BorderRadius.circular(99),
               backgroundColor: AppColors.border,
-              valueColor: const AlwaysStoppedAnimation(AppColors.safe),
+              valueColor: AlwaysStoppedAnimation(AppColors.safe),
             ),
             const SizedBox(height: 14),
             Text('Tasks', style: Theme.of(context).textTheme.labelLarge),
@@ -1359,7 +1348,7 @@ class _OwnerWatchCard extends StatelessWidget {
                       shift.watcherName ??
                           (shift.status == WatchShiftStatus.open
                               ? 'Open'
-                              : shift.status.name),
+                              : shift.status.label),
                     ),
                   ],
                 ),
@@ -1373,7 +1362,7 @@ class _OwnerWatchCard extends StatelessWidget {
                 return ExpansionTile(
                   tilePadding: EdgeInsets.zero,
                   childrenPadding: EdgeInsets.zero,
-                  title: const Text('Activity feed'),
+                  title: const Text('Activity'),
                   subtitle: Text(
                     activity.isEmpty
                         ? 'No updates yet'
@@ -1395,7 +1384,7 @@ class _OwnerWatchCard extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: Text(
-                                  '${entry.actorName} • ${entry.type.name}',
+                                  '${entry.actorName} · ${entry.type.label}',
                                   style: Theme.of(context).textTheme.labelLarge,
                                 ),
                               ),
@@ -1409,7 +1398,7 @@ class _OwnerWatchCard extends StatelessWidget {
                           ),
                           if (entry.vibe != null) ...[
                             const SizedBox(height: 6),
-                            Text('Vibe: ${entry.vibe!.name}'),
+                            Text('Vibe: ${entry.vibe!.label}'),
                           ],
                           if (entry.note != null && entry.note!.isNotEmpty) ...[
                             const SizedBox(height: 6),
@@ -1755,7 +1744,7 @@ class _ShiftActionSheetState extends State<_ShiftActionSheet> {
                 runSpacing: 8,
                 children: WatchVibe.values.map((vibe) {
                   return ChoiceChip(
-                    label: Text(vibe.name),
+                    label: Text(vibe.label),
                     selected: _vibe == vibe,
                     onSelected: (_) => setState(() => _vibe = vibe),
                   );

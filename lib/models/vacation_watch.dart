@@ -404,3 +404,54 @@ class VacationWatch {
     };
   }
 }
+
+extension VacationWatchStatusLabel on VacationWatchStatus {
+  String get label {
+    switch (this) {
+      case VacationWatchStatus.active:
+        return 'Active';
+      case VacationWatchStatus.alert:
+        return 'Alert';
+      case VacationWatchStatus.arrivingHome:
+        return 'Arriving home';
+      case VacationWatchStatus.completed:
+        return 'Completed';
+      case VacationWatchStatus.cancelled:
+        return 'Cancelled';
+    }
+  }
+}
+
+extension WatchShiftStatusLabel on WatchShiftStatus {
+  String get label {
+    switch (this) {
+      case WatchShiftStatus.open:
+        return 'Open';
+      case WatchShiftStatus.claimed:
+        return 'Claimed';
+      case WatchShiftStatus.completed:
+        return 'Completed';
+    }
+  }
+}
+
+extension WatchActivityTypeLabel on WatchActivityType {
+  String get label {
+    switch (this) {
+      case WatchActivityType.checkIn:
+        return 'Check-in';
+      case WatchActivityType.handoff:
+        return 'Handoff';
+      case WatchActivityType.emergency:
+        return 'Emergency';
+      case WatchActivityType.arrival:
+        return 'Arrival';
+      case WatchActivityType.system:
+        return 'Update';
+    }
+  }
+}
+
+extension WatchVibeLabel on WatchVibe {
+  String get label => '${name[0].toUpperCase()}${name.substring(1)}';
+}

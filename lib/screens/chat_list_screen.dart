@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../widgets/community_ui.dart';
 import 'package:intl/intl.dart';
 
@@ -35,6 +36,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
       return email.split('@').first;
     }
     return fallbackId;
+  }
+
+  String _formatTime(DateTime time) {
+    final now = DateTime.now();
+    if (DateUtils.isSameDay(time, now)) return DateFormat('HH:mm').format(time);
+    if (now.difference(time).inDays < 7) return DateFormat('EEE').format(time);
+    return DateFormat('d MMM').format(time);
   }
 
   String _resolveRoomTitle(
@@ -83,18 +91,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const SizedBox(
-                  height: 240,
-                  child: Center(child: CircularProgressIndicator()),
+                  height: 320,
+                  child: SkeletonList(count: 4),
                 );
               }
 
               if (snapshot.hasError) {
-                return Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    'Could not load users: ${snapshot.error}',
-                    textAlign: TextAlign.center,
-                  ),
+                return const EmptyState(
+                  icon: Icons.wifi_off_rounded,
+                  title: 'Could not load neighbours',
+                  message: 'Check your connection and try again.',
                 );
               }
 
@@ -105,17 +111,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   [];
 
               if (users.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'No other users are available yet. Make sure each account has a document in the users collection.',
-                    textAlign: TextAlign.center,
-                  ),
+                return const EmptyState(
+                  icon: Icons.group_add_outlined,
+                  title: 'No one else here yet',
+                  message: 'Invite a neighbour to join Community.',
                 );
               }
 
               return ListView.builder(
                 shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 itemCount: users.length,
                 itemBuilder: (context, index) {
                   final userDoc = users[index];
@@ -126,7 +131,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 10),
                     child: ListTile(
-                      leading: const CircleAvatar(child: Icon(Icons.person)),
+                      leading: CircleAvatar(
+                        backgroundColor: AppColors.watchDim,
+                        child: Text(
+                          displayName.isEmpty
+                              ? '?'
+                              : displayName[0].toUpperCase(),
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
                       title: Text(displayName),
                       subtitle: email == null || email.isEmpty
                           ? null
@@ -220,12 +236,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
         actions: [
           IconButton(
             tooltip: 'Community group',
-            icon: const Icon(Icons.groups_2_outlined),
+            icon: const Icon(Icons.groups_rounded),
             onPressed: _openCommunityChat,
           ),
           IconButton(
-            tooltip: 'Start chat',
-            icon: const Icon(Icons.person_add_alt_1),
+            tooltip: 'New message',
+            icon: const Icon(Icons.add_comment_outlined),
             onPressed: _openNewChatPicker,
           ),
         ],
@@ -234,18 +250,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
         stream: widget.chatRepository.getUsersStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const SkeletonList();
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  'Could not load users: ${snapshot.error}',
-                  textAlign: TextAlign.center,
-                ),
-              ),
+            return const EmptyState(
+              icon: Icons.wifi_off_rounded,
+              title: 'Could not load messages',
+              message: 'Check your connection and try again.',
             );
           }
 
@@ -258,125 +270,155 @@ class _ChatListScreenState extends State<ChatListScreen> {
             stream: widget.chatRepository.getChatRooms(currentUserId),
             builder: (context, roomsSnapshot) {
               if (roomsSnapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const SkeletonList();
               }
 
               if (roomsSnapshot.hasError) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      'Could not load chats: ${roomsSnapshot.error}',
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
+                return const EmptyState(
+                  icon: Icons.wifi_off_rounded,
+                  title: 'Could not load chats',
+                  message: 'Check your connection and try again.',
                 );
               }
 
               final rooms = roomsSnapshot.data ?? [];
 
               if (rooms.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'No messages yet. Start a private chat or open the community group.',
-                          textAlign: TextAlign.center,
+                return EmptyState(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  title: 'No messages yet',
+                  message:
+                      'Message a neighbour privately, or say hello in the '
+                      'community group.',
+                  action: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: _openNewChatPicker,
+                        icon: const Icon(Icons.add_comment_outlined),
+                        label: const Text('New message'),
+                      ),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 52),
                         ),
-                        const SizedBox(height: 12),
-                        FilledButton.icon(
-                          onPressed: _openNewChatPicker,
-                          icon: const Icon(Icons.chat_bubble_outline),
-                          label: const Text('Start Chat'),
-                        ),
-                      ],
-                    ),
+                        onPressed: _openCommunityChat,
+                        icon: const Icon(Icons.groups_rounded),
+                        label: const Text('Community group'),
+                      ),
+                    ],
                   ),
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                itemCount: rooms.length + 1,
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 28),
+                itemCount: rooms.length,
+                separatorBuilder: (_, _) =>
+                    const Divider(height: 1, indent: 76, endIndent: 12),
                 itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return const PageIntro(
-                      title: 'Good conversations\nstart close to home.',
-                      subtitle: 'Private chats and your community group.',
-                      eyebrow: 'Messages',
-                      icon: Icons.forum_outlined,
-                    );
-                  }
-                  final room = rooms[index - 1];
+                  final room = rooms[index];
                   final unreadCount = room.unreadCountFor(currentUserId);
                   final roomTitle = _resolveRoomTitle(
                     room,
                     currentUserId,
                     userNames,
                   );
+                  final hasUnread = unreadCount > 0;
+                  final textTheme = Theme.of(context).textTheme;
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        child: Icon(room.isGroup ? Icons.groups : Icons.person),
-                      ),
-                      title: Text(roomTitle),
-                      subtitle: Text(
-                        room.lastMessage ?? 'No messages yet',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          if (room.lastMessageTime != null)
-                            Text(
-                              DateFormat('HH:mm').format(room.lastMessageTime!),
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          if (unreadCount > 0) ...[
-                            const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                unreadCount > 99 ? '99+' : '$unreadCount',
-                                style: TextStyle(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimary,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    leading: CircleAvatar(
+                      radius: 24,
+                      backgroundColor: room.isGroup
+                          ? AppColors.hero
+                          : AppColors.watchDim,
+                      child: room.isGroup
+                          ? Icon(Icons.groups_rounded, color: AppColors.accent)
+                          : Text(
+                              roomTitle.isEmpty
+                                  ? '?'
+                                  : roomTitle[0].toUpperCase(),
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 18,
                               ),
                             ),
-                          ],
-                        ],
+                    ),
+                    title: Text(
+                      roomTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.titleSmall?.copyWith(
+                        fontWeight: hasUnread
+                            ? FontWeight.w800
+                            : FontWeight.w600,
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ChatMessagesScreen(
-                              authService: widget.authService,
-                              chatRepository: widget.chatRepository,
-                              chatRoom: room,
+                    ),
+                    subtitle: Text(
+                      room.lastMessage ?? 'No messages yet',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: hasUnread ? AppColors.ink : null,
+                      ),
+                    ),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (room.lastMessageTime != null)
+                          Text(
+                            _formatTime(room.lastMessageTime!),
+                            style: textTheme.bodySmall?.copyWith(
+                              color: hasUnread ? AppColors.primary : null,
+                              fontWeight: hasUnread ? FontWeight.w700 : null,
                             ),
                           ),
-                        );
-                      },
+                        if (hasUnread) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            constraints: const BoxConstraints(minWidth: 22),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              unreadCount > 99 ? '99+' : '$unreadCount',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppColors.onPrimary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatMessagesScreen(
+                            authService: widget.authService,
+                            chatRepository: widget.chatRepository,
+                            chatRoom: room,
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               );

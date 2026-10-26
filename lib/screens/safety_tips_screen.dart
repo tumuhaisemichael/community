@@ -5,74 +5,73 @@ import '../widgets/community_ui.dart';
 class SafetyTipsScreen extends StatelessWidget {
   const SafetyTipsScreen({super.key});
 
-  final List<Map<String, String>> tips = const [
-    {
-      'title': 'Secure Your Home',
-      'content':
-          'Ensure all doors and windows are locked before leaving or sleeping. Use deadbolts for extra security.',
-    },
-    {
-      'title': 'Neighborhood Watch',
-      'content':
-          'Get to know your neighbors. A community that looks out for each other is a safer community.',
-    },
-    {
-      'title': 'Emergency Preparedness',
-      'content':
-          'Keep a list of emergency numbers handy and have a basic first-aid kit in your home.',
-    },
-    {
-      'title': 'Report Suspicious Activity',
-      'content':
-          'Don\'t hesitate to report anything unusual. Early reporting can prevent crimes.',
-    },
+  final List<({IconData icon, String title, String content})> tips = const [
+    (
+      icon: Icons.lock_outline_rounded,
+      title: 'Secure your home',
+      content:
+          'Lock all doors and windows before leaving or going to sleep. Use '
+          'deadbolts for extra security.',
+    ),
+    (
+      icon: Icons.groups_outlined,
+      title: 'Know your neighbours',
+      content:
+          'A street where people know each other notices when something is '
+          'wrong. Say hello and swap numbers.',
+    ),
+    (
+      icon: Icons.medical_services_outlined,
+      title: 'Be ready for emergencies',
+      content:
+          'Keep emergency numbers saved on your phone (Police 999, Ambulance '
+          '912) and a basic first-aid kit at home.',
+    ),
+    (
+      icon: Icons.visibility_outlined,
+      title: 'Report anything unusual',
+      content:
+          'Early reports help neighbours stay alert and can prevent crime. '
+          'If in doubt, report it.',
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Safety Tips & Resources')),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(22),
-        itemCount: tips.length + 1,
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return const PageIntro(
-              title: 'Small habits. Safer days.',
-              subtitle:
-                  'Practical ways to look out for yourself and your neighbors.',
-              eyebrow: 'Safety Tips & Resources',
-              icon: Icons.lightbulb_outline_rounded,
-            );
-          }
-          final tip = tips[index - 1];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Padding(
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '0$index',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: AppColors.watch,
+      appBar: AppBar(title: const Text('Safety tips')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+        children: [
+          const PageIntro(
+            'Simple habits that keep you and your neighbours safer.',
+          ),
+          for (final tip in tips)
+            Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    IconBadge(icon: tip.icon, color: AppColors.primary),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(tip.title, style: textTheme.titleMedium),
+                          const SizedBox(height: 6),
+                          Text(tip.content, style: textTheme.bodyMedium),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    tip['title']!,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(tip['content']!),
-                ],
+                  ],
+                ),
               ),
             ),
-          );
-        },
+        ],
       ),
     );
   }

@@ -1,5 +1,4 @@
 import 'package:community/screens/emergency_contacts_screen.dart';
-import 'package:community/widgets/neighborhood_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:community/theme/app_theme.dart';
 import 'package:community/widgets/community_ui.dart';
@@ -18,20 +17,22 @@ void main() {
       final invoked = <String>[];
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.light,
+          theme: AppTheme.current,
           home: Scaffold(
             body: MediaQuery(
               data: const MediaQueryData(textScaler: TextScaler.linear(2)),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: HomeOverview(
-                  greeting: 'Good morning, neighbor',
-                  onAround: () => invoked.add('around'),
-                  onSos: () => invoked.add('sos'),
+                  posts: const [],
+                  currentLocation: null,
+                  onSosTap: () => invoked.add('sos'),
+                  onSosTriggered: () => invoked.add('sos-sent'),
+                  onOpenMap: () => invoked.add('map'),
                   onReport: () => invoked.add('report'),
                   onVacation: () => invoked.add('vacation'),
-                  onMessages: () => invoked.add('messages'),
-                  onBulletin: () => invoked.add('bulletin'),
+                  onEmergency: () => invoked.add('emergency'),
+                  onPolice: () => invoked.add('police'),
                 ),
               ),
             ),
@@ -40,12 +41,12 @@ void main() {
       );
       await tester.pumpAndSettle();
       for (final label in [
-        'Explore around you',
-        'Need help right now?',
-        'Report Incident',
+        'Hold 2 seconds to send SOS',
+        'No reports nearby',
+        'Report',
         'Vacation watch',
-        'Messages',
-        'Bulletin board',
+        'Emergency',
+        'Police',
       ]) {
         await tester.ensureVisible(find.text(label));
         await tester.tap(find.text(label));
@@ -53,15 +54,43 @@ void main() {
         expect(tester.takeException(), isNull);
       }
       expect(invoked, [
-        'around',
         'sos',
+        'map',
         'report',
         'vacation',
-        'messages',
-        'bulletin',
+        'emergency',
+        'police',
       ]);
     },
   );
+
+  testWidgets('SOS sends only after a full two-second hold', (tester) async {
+    var sent = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SosHoldButton(onTap: () {}, onTriggered: () => sent++),
+        ),
+      ),
+    );
+    final button = find.byType(SosHoldButton);
+
+    final short = await tester.startGesture(tester.getCenter(button));
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump(const Duration(milliseconds: 600));
+    await short.up();
+    await tester.pumpAndSettle();
+    expect(sent, 0);
+
+    final long = await tester.startGesture(tester.getCenter(button));
+    await tester.pump(const Duration(milliseconds: 600));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+    await long.up();
+    await tester.pumpAndSettle();
+    expect(sent, 1);
+  });
 
   testWidgets('Entrance effects respect reduced motion', (tester) async {
     await tester.pumpWidget(
@@ -80,7 +109,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(theme: AppTheme.light, home: const PrivacyControlsScreen()),
+      MaterialApp(theme: AppTheme.current, home: const PrivacyControlsScreen()),
     );
     await tester.pumpAndSettle();
     final email = find.widgetWithText(SwitchListTile, 'Show email address');
@@ -99,33 +128,6 @@ void main() {
     );
   });
 
-  testWidgets('Neighborhood header fits a small screen with enlarged text', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(320, 700);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: MediaQuery(
-            data: const MediaQueryData(textScaler: TextScaler.linear(1.5)),
-            child: const SingleChildScrollView(
-              child: NeighborhoodBanner(
-                eyebrow: 'Good morning, neighbor',
-                title: 'Your neighborhood',
-                subtitle: 'Your neighborhood at a glance.',
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    expect(find.text('Your neighborhood'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets('SOS opens the existing confirmation action only when tapped', (
     tester,
   ) async {
@@ -134,7 +136,7 @@ void main() {
       MaterialApp(home: EmergencyContactsScreen(onSos: () => confirmations++)),
     );
     expect(confirmations, 0);
-    await tester.tap(find.text('Send Alert'));
+    await tester.tap(find.text('Send SOS alert'));
     expect(confirmations, 1);
     expect(tester.takeException(), isNull);
   });

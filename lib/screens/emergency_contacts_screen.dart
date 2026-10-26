@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
-import '../widgets/neighborhood_banner.dart';
+import '../widgets/community_ui.dart';
 
 class EmergencyContactsScreen extends StatelessWidget {
   const EmergencyContactsScreen({super.key, this.onSos});
@@ -24,55 +24,61 @@ class EmergencyContactsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Emergency Contacts')),
+      appBar: AppBar(title: const Text('Emergency')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
         children: [
-          const NeighborhoodBanner(
-            title: 'Help is one call away.',
-            eyebrow: 'Emergency Contacts',
-            subtitle: 'Get help quickly. A safer community, together.',
+          const PageIntro(
+            'In danger right now? Call the police first, then alert your '
+            'neighbours.',
           ),
-          const SizedBox(height: 24),
           if (onSos != null) ...[
-            Container(
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                color: AppColors.alertDim,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(
-                    Icons.sos_rounded,
-                    color: AppColors.alert,
-                    size: 48,
+            Material(
+              color: AppColors.alert,
+              borderRadius: BorderRadius.circular(22),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onSos,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.sos_rounded,
+                        color: Colors.white,
+                        size: 36,
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Send SOS alert',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(color: Colors.white),
+                            ),
+                            Text(
+                              'Posts an SOS with your location after you '
+                              'confirm',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Colors.white.withValues(alpha: .88),
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: Colors.white,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'In immediate danger?',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Tap to review and confirm your SOS alert.',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
-                  FilledButton.icon(
-                    onPressed: onSos,
-                    icon: const Icon(Icons.emergency_outlined),
-                    label: const Text('Send Alert'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.alert,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
           ],
           Text('Call for help', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
@@ -81,7 +87,7 @@ class EmergencyContactsScreen extends StatelessWidget {
             final colors = [
               AppColors.watch,
               AppColors.alert,
-              const Color(0xFFE78A32),
+              AppColors.sevMedium,
               AppColors.safe,
               AppColors.watch,
             ];
@@ -94,7 +100,7 @@ class EmergencyContactsScreen extends StatelessWidget {
             ];
             final color = colors[entry.key];
             return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: 10),
               child: Card(
                 margin: EdgeInsets.zero,
                 child: ListTile(
@@ -104,21 +110,29 @@ class EmergencyContactsScreen extends StatelessWidget {
                   ),
                   leading: CircleAvatar(
                     radius: 26,
-                    backgroundColor: color.withValues(alpha: 0.1),
+                    backgroundColor: color.withValues(
+                      alpha: AppColors.isDark ? .2 : .1,
+                    ),
                     child: Icon(icons[entry.key], color: color),
                   ),
                   title: Text(
                     contact['name']!,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  subtitle: Text(contact['number']!),
-                  trailing: IconButton.filledTonal(
+                  subtitle: Text(
+                    contact['number']!,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppColors.mutedText,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                  trailing: IconButton.filled(
                     tooltip: 'Call ${contact['name']}',
                     style: IconButton.styleFrom(
-                      backgroundColor: AppColors.safeDim,
-                      foregroundColor: AppColors.safe,
+                      backgroundColor: AppColors.safe,
+                      foregroundColor: Colors.white,
                     ),
-                    icon: const Icon(Icons.call),
+                    icon: const Icon(Icons.call_rounded),
                     onPressed: () => _callNumber(contact['number']!),
                   ),
                   onTap: () => _callNumber(contact['number']!),

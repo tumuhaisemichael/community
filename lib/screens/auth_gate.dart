@@ -5,6 +5,7 @@ import '../repositories/post_repository.dart';
 import '../services/auth_service.dart';
 import 'auth_screen.dart';
 import 'home_screen.dart';
+import 'splash_gate.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({
@@ -22,9 +23,7 @@ class AuthGate extends StatelessWidget {
       stream: authService.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const SplashScreen();
         }
 
         if (snapshot.hasData) {

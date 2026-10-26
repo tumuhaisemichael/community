@@ -5,7 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'dart:io' show File;
 import '../models/community_post.dart';
 import '../theme/app_theme.dart';
-import '../widgets/neighborhood_banner.dart';
+import '../widgets/community_ui.dart';
 import '../repositories/post_repository.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
@@ -109,22 +109,22 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Report Incident')),
+      appBar: AppBar(title: const Text('Report an incident')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const NeighborhoodBanner(
-                title: 'Every detail helps.',
-                eyebrow: 'Report Incident',
-                subtitle: 'Keep your neighbors informed. Help starts here.',
+              Text(
+                'Tell neighbours what happened. Reports are shared with '
+                'the community feed and map.',
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 24),
               Text(
-                'Incident Type',
+                'What happened?',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 12),
@@ -132,47 +132,23 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  for (final category in [
-                    PostCategory.theft,
-                    PostCategory.medical,
-                    PostCategory.fire,
-                    PostCategory.accident,
-                  ])
-                    ChoiceChip(
-                      avatar: Icon(switch (category) {
-                        PostCategory.theft => Icons.local_police_outlined,
-                        PostCategory.medical => Icons.medical_services_outlined,
-                        PostCategory.fire =>
-                          Icons.local_fire_department_outlined,
-                        _ => Icons.car_crash_outlined,
-                      }, size: 20),
-                      label: Text(category.name.toUpperCase()),
-                      selected: _selectedCategory == category,
-                      selectedColor: AppColors.watchDim,
-                      onSelected: (_) =>
-                          setState(() => _selectedCategory = category),
-                    ),
+                  for (final category in PostCategory.values)
+                    if (category != PostCategory.vacationWatch)
+                      ChoiceChip(
+                        avatar: Icon(categoryIcon(category), size: 18),
+                        label: Text(category.label),
+                        selected: _selectedCategory == category,
+                        showCheckmark: false,
+                        onSelected: (_) =>
+                            setState(() => _selectedCategory = category),
+                      ),
                 ],
               ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<PostCategory>(
-                key: ValueKey(_selectedCategory),
-                initialValue: _selectedCategory,
-                decoration: const InputDecoration(labelText: 'Incident Type'),
-                items: PostCategory.values.map((category) {
-                  return DropdownMenuItem(
-                    value: category,
-                    child: Text(category.name.toUpperCase()),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _selectedCategory = value);
-                  }
-                },
+              const SizedBox(height: 24),
+              Text(
+                'How serious is it?',
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(height: 16),
-              Text('Severity', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,
@@ -181,19 +157,16 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                   for (final severity in PostSeverity.values)
                     ChoiceChip(
                       avatar: Icon(
-                        severity == PostSeverity.critical
-                            ? Icons.priority_high
-                            : Icons.flag_outlined,
-                        size: 18,
+                        Icons.circle,
+                        size: 12,
+                        color: severityColor(severity),
                       ),
-                      label: Text(severity.name.toUpperCase()),
+                      label: Text(severity.label),
+                      showCheckmark: false,
                       selected: _selectedSeverity == severity,
-                      selectedColor: switch (severity) {
-                        PostSeverity.low => AppColors.safeDim,
-                        PostSeverity.medium => AppColors.watchDim,
-                        PostSeverity.high => const Color(0xFFFFECD9),
-                        PostSeverity.critical => AppColors.alertDim,
-                      },
+                      selectedColor: severityColor(
+                        severity,
+                      ).withValues(alpha: .18),
                       onSelected: (_) =>
                           setState(() => _selectedSeverity = severity),
                     ),
@@ -219,17 +192,19 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
               SwitchListTile(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: AppColors.border),
                 ),
-                tileColor: AppColors.safeDim,
-                title: const Text('Report Anonymously'),
+                tileColor: AppColors.card,
+                title: const Text('Post anonymously'),
+                subtitle: const Text('Neighbours will not see your name'),
                 value: _isAnonymous,
                 onChanged: (value) => setState(() => _isAnonymous = value),
               ),
               const SizedBox(height: 16),
-              ElevatedButton.icon(
+              OutlinedButton.icon(
                 onPressed: _pickImages,
-                icon: const Icon(Icons.add_a_photo),
-                label: const Text('Add Photos'),
+                icon: const Icon(Icons.add_a_photo_outlined),
+                label: const Text('Add photos'),
               ),
               if (_selectedImages.isNotEmpty)
                 SizedBox(
@@ -261,8 +236,14 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
               FilledButton(
                 onPressed: _isSubmitting ? null : _submit,
                 child: _isSubmitting
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Submit Report'),
+                    ? SizedBox.square(
+                        dimension: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: AppColors.onPrimary,
+                        ),
+                      )
+                    : const Text('Post report'),
               ),
             ],
           ),

@@ -40,13 +40,13 @@ class _VacationHousePickerScreenState extends State<VacationHousePickerScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pick House Location'),
+        title: const Text('Pin your home'),
         actions: [
           TextButton(
             onPressed: selectedLocation == null
                 ? null
                 : () => Navigator.pop(context, selectedLocation),
-            child: const Text('Use Pin'),
+            child: const Text('Done'),
           ),
         ],
       ),
@@ -83,7 +83,7 @@ class _VacationHousePickerScreenState extends State<VacationHousePickerScreen> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: AppColors.card,
                                 borderRadius: BorderRadius.circular(999),
                                 boxShadow: const [
                                   BoxShadow(
@@ -96,7 +96,7 @@ class _VacationHousePickerScreenState extends State<VacationHousePickerScreen> {
                               child: const Text('House location'),
                             ),
                             const SizedBox(height: 4),
-                            const Icon(
+                            Icon(
                               Icons.location_pin,
                               color: AppColors.watch,
                               size: 34,
@@ -139,7 +139,7 @@ class _VacationHousePickerScreenState extends State<VacationHousePickerScreen> {
                       ? null
                       : () => Navigator.pop(context, selectedLocation),
                   icon: const Icon(Icons.check_circle_outline),
-                  label: const Text('Confirm house location'),
+                  label: const Text('Use this location'),
                 ),
               ],
             ),

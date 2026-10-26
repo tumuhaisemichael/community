@@ -51,7 +51,7 @@ class PostLocationScreen extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: AppColors.card,
                               borderRadius: BorderRadius.circular(999),
                               boxShadow: const [
                                 BoxShadow(
@@ -68,7 +68,7 @@ class PostLocationScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Icon(
+                          Icon(
                             Icons.location_pin,
                             color: AppColors.watch,
                             size: 34,
