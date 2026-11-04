@@ -102,6 +102,19 @@ class ChatRoom {
   final String backgroundKey;
   final String bubbleThemeKey;
 
+  /// Custom colour for messages and highlights (ARGB), or null for the
+  /// bubble theme's own colour.
+  final int? accentColor;
+
+  /// 'rounded', 'pill', 'square' or 'outline'.
+  final String bubbleStyle;
+
+  /// 'small', 'default' or 'large'.
+  final String textSize;
+
+  /// People who keep this chat at the top of their chat list.
+  final List<String> pinnedBy;
+
   ChatRoom({
     required this.id,
     required this.name,
@@ -113,7 +126,13 @@ class ChatRoom {
     this.unreadCounts = const {},
     this.backgroundKey = defaultChatBackgroundKey,
     this.bubbleThemeKey = defaultChatBubbleThemeKey,
+    this.accentColor,
+    this.bubbleStyle = 'rounded',
+    this.textSize = 'default',
+    this.pinnedBy = const [],
   });
+
+  bool isPinnedBy(String userId) => pinnedBy.contains(userId);
 
   factory ChatRoom.fromMap(Map<String, dynamic> data, String id) {
     final rawUnreadCounts = data['unreadCounts'] as Map<String, dynamic>? ?? {};
@@ -131,6 +150,10 @@ class ChatRoom {
       ),
       backgroundKey: data['backgroundKey'] ?? defaultChatBackgroundKey,
       bubbleThemeKey: data['bubbleThemeKey'] ?? defaultChatBubbleThemeKey,
+      accentColor: (data['accentColor'] as num?)?.toInt(),
+      bubbleStyle: data['bubbleStyle'] as String? ?? 'rounded',
+      textSize: data['textSize'] as String? ?? 'default',
+      pinnedBy: List<String>.from(data['pinnedBy'] ?? const []),
     );
   }
 
@@ -147,6 +170,10 @@ class ChatRoom {
       'unreadCounts': unreadCounts,
       'backgroundKey': backgroundKey,
       'bubbleThemeKey': bubbleThemeKey,
+      'accentColor': accentColor,
+      'bubbleStyle': bubbleStyle,
+      'textSize': textSize,
+      'pinnedBy': pinnedBy,
     };
   }
 

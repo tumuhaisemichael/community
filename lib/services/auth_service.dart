@@ -27,4 +27,8 @@ class AuthService {
   }
 
   Future<void> signOut() => _auth.signOut();
+
+  /// Emails a link to set a new password.
+  Future<void> sendPasswordReset(String email) =>
+      _auth.sendPasswordResetEmail(email: email);
 }

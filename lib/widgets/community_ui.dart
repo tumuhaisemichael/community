@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/community_post.dart';
 import '../theme/app_theme.dart';
+import '../theme/home_tone.dart';
 
 /// Small entrance motion, disabled when the system requests reduced motion.
 class Reveal extends StatelessWidget {
@@ -315,7 +316,7 @@ class CommunityHero extends StatelessWidget {
                   'A place to belong.\nA community to rely on.',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
-                    fontSize: 28,
+                    fontSize: 22,
                     height: 1.16,
                     letterSpacing: -.9,
                   ),
@@ -361,10 +362,12 @@ class SkeletonBox extends StatefulWidget {
     this.width = double.infinity,
     required this.height,
     this.radius = 12,
+    this.color,
   });
   final double width;
   final double height;
   final double radius;
+  final Color? color;
 
   @override
   State<SkeletonBox> createState() => _SkeletonBoxState();
@@ -389,7 +392,7 @@ class _SkeletonBoxState extends State<SkeletonBox>
       width: widget.width,
       height: widget.height,
       decoration: BoxDecoration(
-        color: AppColors.border,
+        color: widget.color ?? AppColors.border,
         borderRadius: BorderRadius.circular(widget.radius),
       ),
     );
@@ -492,14 +495,19 @@ class _SosHoldButtonState extends State<SosHoldButton>
           animation: _hold,
           builder: (context, _) {
             final holding = _hold.value > 0;
+            final colors = HomeTone.sosGradient;
             return Container(
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: AppColors.alert,
-                borderRadius: BorderRadius.circular(22),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: colors,
+                ),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.alert.withValues(alpha: .35),
+                    color: colors.last.withValues(alpha: .35),
                     blurRadius: 22,
                     offset: const Offset(0, 10),
                     spreadRadius: -8,
@@ -518,59 +526,41 @@ class _SosHoldButtonState extends State<SosHoldButton>
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 14, 18, 14),
-                    child: Row(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                    child: Column(
                       children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha: .18),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: .6),
-                              width: 2,
-                            ),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            'SOS',
-                            style: TextStyle(
+                        const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.warning_rounded,
                               color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14,
-                              letterSpacing: .6,
+                              size: 26,
                             ),
-                          ),
+                            SizedBox(width: 12),
+                            Text(
+                              'SOS',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 22,
+                                letterSpacing: 1.2,
+                                height: 1.1,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                holding
-                                    ? 'Keep holding…'
-                                    : 'Hold 2 seconds to send SOS',
-                                style: Theme.of(context).textTheme.titleSmall
-                                    ?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15,
-                                    ),
+                        const SizedBox(height: 4),
+                        Text(
+                          holding
+                              ? 'Keep holding…'
+                              : 'Tap to confirm • Hold for 2s to send now',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Colors.white.withValues(alpha: .95),
+                                fontWeight: FontWeight.w500,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Posts an urgent alert with your location',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: Colors.white.withValues(
-                                        alpha: .88,
-                                      ),
-                                    ),
-                              ),
-                            ],
-                          ),
                         ),
                       ],
                     ),

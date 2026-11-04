@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:flutter/services.dart';
+import 'package:latlong2/latlong.dart' show LatLng;
 import 'package:community/screens/report_incident_screen.dart';
 import 'package:community/screens/around_screen.dart';
 import 'package:community/screens/chat_list_screen.dart';
@@ -17,9 +19,15 @@ import 'package:community/screens/statistics_dashboard_screen.dart';
 import '../models/community_post.dart';
 import '../repositories/post_repository.dart';
 import '../services/auth_service.dart';
+import '../services/ui_preferences.dart';
 import '../services/user_location_tracking_service.dart';
 import '../theme/app_theme.dart';
+import '../theme/home_tone.dart';
 import '../widgets/community_ui.dart';
+import '../widgets/glass_nav_bar.dart';
+import '../widgets/hero_header.dart';
+import '../widgets/overlap_header.dart';
+import '../widgets/report_row.dart';
 import '../widgets/home_overview.dart';
 
 /// Signed-in shell: bottom tabs for Home, Map, Messages and Me, with Report
@@ -51,6 +59,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingLocation = true;
 
   _Tab _tab = _Tab.home;
+
+  /// Where the Report button sits on the bar (0 = far left, 4 = far right).
+  int _reportSlot = 2;
   // Tabs are built the first time they are opened, then kept alive.
   final Set<_Tab> _visited = {_Tab.home};
 
@@ -58,6 +69,42 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadCurrentLocation();
+    _loadReportSlot();
+    UiPreferences.instance.load(widget.authService.currentUser?.uid).then((_) {
+      // Open on the tab chosen in Me → Home Screen, unless the user has
+      // already moved somewhere.
+      if (!mounted || _tab != _Tab.home) return;
+      final start = switch (UiPreferences.instance.startTab) {
+        'map' => _Tab.map,
+        'messages' => _Tab.messages,
+        _ => _Tab.home,
+      };
+      if (start != _Tab.home) _selectTab(start);
+    });
+  }
+
+  DocumentReference<Map<String, dynamic>>? get _userDoc {
+    final userId = widget.authService.currentUser?.uid;
+    if (userId == null || userId.isEmpty) return null;
+    return FirebaseFirestore.instance.collection('users').doc(userId);
+  }
+
+  Future<void> _loadReportSlot() async {
+    try {
+      final snapshot = await _userDoc?.get();
+      final slot = snapshot?.data()?['navReportSlot'];
+      if (!mounted || slot is! int) return;
+      setState(() => _reportSlot = slot.clamp(0, _navItems.length));
+    } catch (_) {
+      // Keep the default position if the saved one cannot be read.
+    }
+  }
+
+  void _moveReportButton(int slot) {
+    setState(() => _reportSlot = slot);
+    _userDoc
+        ?.set({'navReportSlot': slot}, SetOptions(merge: true))
+        .catchError((_) {});
   }
 
   @override
@@ -94,6 +141,13 @@ class _HomeScreenState extends State<HomeScreen> {
       _locationError = message;
       _isLoadingLocation = false;
     });
+  }
+
+  String get _userInitial {
+    final user = widget.authService.currentUser;
+    final name = user?.displayName?.trim();
+    final source = name == null || name.isEmpty ? (user?.email ?? '') : name;
+    return source.isEmpty ? '?' : source[0].toUpperCase();
   }
 
   Future<T?> _openScreen<T>(Widget screen) {
@@ -174,6 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
     CommunityBulletinScreen(
       authService: widget.authService,
       postRepository: widget.postRepository,
+      currentLocation: _currentLocation,
     ),
   );
 
@@ -203,7 +258,12 @@ class _HomeScreenState extends State<HomeScreen> {
       icon: Icons.groups_outlined,
       title: 'Neighbour directory',
       subtitle: 'Members and verified neighbours',
-      onTap: () => _openScreen(const NeighborDirectoryScreen()),
+      onTap: () => _openScreen(
+        NeighborDirectoryScreen(
+          authService: widget.authService,
+          chatRepository: _chatRepository,
+        ),
+      ),
     ),
     SettingsTool(
       icon: Icons.edit_note_outlined,
@@ -267,7 +327,12 @@ class _HomeScreenState extends State<HomeScreen> {
         return AroundScreen(
           key: ValueKey(_currentLocation == null),
           currentUserId: widget.authService.currentUser?.uid ?? '',
-          initialCenter: _currentLocation ?? _defaultCenter,
+          currentLocation: _currentLocation,
+          fallbackCenter: _defaultCenter,
+          postRepository: widget.postRepository,
+          userInitial: _userInitial,
+          onOpenBulletin: _openBulletin,
+          onOpenMe: () => _selectTab(_Tab.me),
         );
       case _Tab.messages:
         return ChatListScreen(
@@ -281,56 +346,54 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  static const _navTabs = [_Tab.home, _Tab.map, _Tab.messages, _Tab.me];
+  static const _navItems = [
+    GlassNavItem(
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home_rounded,
+      label: 'Home',
+    ),
+    GlassNavItem(
+      icon: Icons.location_on_outlined,
+      selectedIcon: Icons.location_on_rounded,
+      label: 'Map',
+    ),
+    GlassNavItem(
+      icon: Icons.chat_bubble_outline_rounded,
+      selectedIcon: Icons.chat_bubble_rounded,
+      label: 'Messages',
+    ),
+    GlassNavItem(
+      icon: Icons.person_outline_rounded,
+      selectedIcon: Icons.person_rounded,
+      label: 'Me',
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    const tabs = [_Tab.home, _Tab.map, _Tab.messages, _Tab.me];
+    final isHome = _tab == _Tab.home;
     return PopScope(
-      canPop: _tab == _Tab.home,
+      canPop: isHome,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _selectTab(_Tab.home);
       },
       child: Scaffold(
+        // Every tab uses the light violet look and runs all the way down
+        // behind the glass bar, so nothing dark shows around it.
+        extendBody: true,
+        backgroundColor: HomeTone.canvas,
         body: IndexedStack(
-          index: tabs.indexOf(_tab),
-          children: [for (final tab in tabs) _buildTab(tab)],
+          index: _navTabs.indexOf(_tab),
+          children: [for (final tab in _navTabs) _buildTab(tab)],
         ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _tab.index,
-          onDestinationSelected: (index) => _selectTab(_Tab.values[index]),
-          destinations: [
-            const NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.map_outlined),
-              selectedIcon: Icon(Icons.map_rounded),
-              label: 'Map',
-            ),
-            NavigationDestination(
-              icon: Container(
-                width: 46,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(Icons.add_rounded, color: AppColors.onPrimary),
-              ),
-              label: 'Report',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.chat_bubble_outline_rounded),
-              selectedIcon: Icon(Icons.chat_bubble_rounded),
-              label: 'Messages',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.person_outline_rounded),
-              selectedIcon: Icon(Icons.person_rounded),
-              label: 'Me',
-            ),
-          ],
+        bottomNavigationBar: GlassNavBar(
+          items: _navItems,
+          selectedIndex: _navTabs.indexOf(_tab),
+          onSelect: (index) => _selectTab(_navTabs[index]),
+          actionSlot: _reportSlot,
+          onAction: _openReport,
+          onActionMoved: _moveReportButton,
         ),
       ),
     );
@@ -391,127 +454,89 @@ class _HomeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = _firstName();
-    final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 76,
-        titleSpacing: 20,
-        title: Row(
-          children: [
-            Semantics(
-              button: true,
-              label: 'Open profile',
-              child: InkWell(
-                onTap: onOpenMe,
-                customBorder: const CircleBorder(),
-                child: CircleAvatar(
-                  radius: 21,
-                  backgroundColor: AppColors.watchDim,
-                  child: Text(
-                    name.isEmpty ? '?' : name[0].toUpperCase(),
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 17,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_greeting, style: textTheme.bodySmall),
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.titleLarge?.copyWith(fontSize: 20),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Community bulletin',
-            onPressed: onOpenBulletin,
-            icon: const Icon(Icons.notifications_none_rounded),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: StreamBuilder<List<CommunityPost>>(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: StreamBuilder<List<CommunityPost>>(
         stream: postRepository.getPostsStream(),
         builder: (context, snapshot) {
           final posts = snapshot.data ?? const <CommunityPost>[];
           final loading =
               snapshot.connectionState == ConnectionState.waiting &&
               !snapshot.hasData;
+          final hasAlerts = recentNearby(
+            posts,
+            currentLocation,
+          ).any((p) => p.severity.isSerious);
 
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
-                children: [
-                  HomeOverview(
-                    posts: posts,
-                    currentLocation: currentLocation,
-                    onSosTap: onSosTap,
-                    onSosTriggered: onSosTriggered,
-                    onReport: onReport,
-                    onVacation: onVacation,
-                    onEmergency: onEmergency,
-                    onPolice: onPolice,
-                    onOpenMap: onOpenMap,
-                  ),
-                  if (!isLoadingLocation && locationError != null)
-                    _LocationNotice(
-                      message: locationError!,
-                      onRetry: onRetryLocation,
-                    ),
-                  const SizedBox(height: 24),
-                  SectionHeading(
-                    title: 'Updates near you',
-                    action: TextButton(
-                      onPressed: onOpenBulletin,
-                      child: const Text('See all'),
-                    ),
-                  ),
-                  if (loading)
-                    for (var i = 0; i < 3; i++)
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 10),
-                        child: SkeletonBox(height: 72, radius: 16),
-                      )
-                  else if (snapshot.hasError && posts.isEmpty)
-                    const _EmptyState(
-                      icon: Icons.wifi_off_rounded,
-                      message: 'Could not load updates. Check your connection.',
-                    )
-                  else if (posts.isEmpty)
-                    _EmptyState(
-                      icon: Icons.forum_outlined,
-                      message: 'No updates yet.',
-                      action: TextButton(
-                        onPressed: onReport,
-                        child: const Text('Report something'),
-                      ),
-                    )
-                  else
-                    for (final post in posts.take(5))
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _UpdateRow(post: post, onTap: onOpenBulletin),
-                      ),
-                ],
-              ),
+          return ListView(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.paddingOf(context).bottom,
             ),
+            children: [
+              OverlapHeader(
+                overlap: 28,
+                header: HeroHeader(
+                  title: '$_greeting, $name 👋',
+                  subtitle: 'Your neighbourhood at a glance',
+                  initial: name.isEmpty ? '?' : name[0].toUpperCase(),
+                  hasAlerts: hasAlerts,
+                  onOpenBulletin: onOpenBulletin,
+                  onOpenMe: onOpenMe,
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: HomeTone.canvas,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 640),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            HomeOverview(
+                              posts: posts,
+                              currentLocation: currentLocation,
+                              onSosTap: onSosTap,
+                              onSosTriggered: onSosTriggered,
+                              onReport: onReport,
+                              onVacation: onVacation,
+                              onEmergency: onEmergency,
+                              onPolice: onPolice,
+                              onOpenMap: onOpenMap,
+                            ),
+                            if (!isLoadingLocation && locationError != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 14),
+                                child: LocationNotice(
+                                  message: locationError!,
+                                  onRetry: onRetryLocation,
+                                ),
+                              ),
+                            const SizedBox(height: 14),
+                            Reveal(
+                              order: 3,
+                              child: _UpdatesCard(
+                                posts: posts,
+                                loading: loading,
+                                hasError: snapshot.hasError,
+                                onOpenBulletin: onOpenBulletin,
+                                onReport: onReport,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -519,111 +544,125 @@ class _HomeTab extends StatelessWidget {
   }
 }
 
-class _LocationNotice extends StatelessWidget {
-  const _LocationNotice({required this.message, required this.onRetry});
-  final String message;
-  final VoidCallback onRetry;
+/// "Updates near you": the five newest posts in one card.
+class _UpdatesCard extends StatelessWidget {
+  const _UpdatesCard({
+    required this.posts,
+    required this.loading,
+    required this.hasError,
+    required this.onOpenBulletin,
+    required this.onReport,
+  });
 
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 14),
-    child: Container(
-      padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.location_off_outlined, size: 18, color: AppColors.amber),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(message, style: Theme.of(context).textTheme.bodySmall),
-          ),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
-        ],
-      ),
-    ),
-  );
-}
-
-class _UpdateRow extends StatelessWidget {
-  const _UpdateRow({required this.post, required this.onTap});
-  final CommunityPost post;
-  final VoidCallback onTap;
-
-  String _ago(DateTime time) {
-    final diff = DateTime.now().difference(time);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-    if (diff.inHours < 24) return '${diff.inHours} h ago';
-    return '${diff.inDays} d ago';
-  }
+  final List<CommunityPost> posts;
+  final bool loading;
+  final bool hasError;
+  final VoidCallback onOpenBulletin;
+  final VoidCallback onReport;
 
   @override
   Widget build(BuildContext context) {
-    final color = severityColor(post.severity);
-    final textTheme = Theme.of(context).textTheme;
-    return Material(
-      color: AppColors.card,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: AppColors.border),
-      ),
+    final shown = posts.take(5).toList();
+    return Container(
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(width: 4, color: color),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
-                  child: Row(
+      decoration: BoxDecoration(
+        color: HomeTone.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: HomeTone.border),
+        boxShadow: HomeTone.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 10, 6, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Semantics(
+                    header: true,
+                    child: Text(
+                      'Updates near you',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: HomeTone.ink,
+                        fontSize: 18.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: onOpenBulletin,
+                  style: TextButton.styleFrom(foregroundColor: HomeTone.violet),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: .13),
-                          borderRadius: BorderRadius.circular(11),
-                        ),
-                        child: Icon(
-                          categoryIcon(post.category),
-                          color: color,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              post.content,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.titleSmall,
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              '${post.severity.label} · ${post.category.label}'
-                              ' · ${_ago(post.createdAt)}',
-                              style: textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
+                      Text('See all', style: TextStyle(fontSize: 14.5)),
+                      SizedBox(width: 4),
+                      Icon(Icons.arrow_forward_rounded, size: 20),
                     ],
                   ),
                 ),
+              ],
+            ),
+          ),
+          if (loading)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+              child: Column(
+                children: [
+                  for (var i = 0; i < 3; i++)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 10),
+                      child: SkeletonBox(
+                        height: 56,
+                        radius: 12,
+                        color: HomeTone.skeleton,
+                      ),
+                    ),
+                ],
+              ),
+            )
+          else if (hasError && posts.isEmpty)
+            const _EmptyState(
+              icon: Icons.wifi_off_rounded,
+              message: 'Could not load updates. Check your connection.',
+            )
+          else if (posts.isEmpty)
+            _EmptyState(
+              icon: Icons.forum_outlined,
+              message: 'No updates yet.',
+              action: TextButton(
+                onPressed: onReport,
+                style: TextButton.styleFrom(foregroundColor: HomeTone.violet),
+                child: const Text('Report something'),
+              ),
+            )
+          else ...[
+            for (var i = 0; i < shown.length; i++) ...[
+              if (i > 0)
+                Divider(
+                  height: 1,
+                  indent: 30,
+                  endIndent: 16,
+                  color: HomeTone.border,
+                ),
+              ReportRow(
+                post: shown[i],
+                subtitle:
+                    '${shown[i].categoriesLabel} · ${shown[i].severity.label}',
+                trailing: Text(
+                  timeAgo(shown[i].createdAt),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: HomeTone.muted),
+                ),
+                onTap: onOpenBulletin,
               ),
             ],
-          ),
-        ),
+            const SizedBox(height: 8),
+          ],
+        ],
       ),
     );
   }
@@ -638,22 +677,18 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       child: Column(
         children: [
-          Icon(icon, color: AppColors.mutedText, size: 28),
+          Icon(icon, color: HomeTone.muted, size: 28),
           const SizedBox(height: 10),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: HomeTone.muted),
           ),
           ?action,
         ],

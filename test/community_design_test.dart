@@ -41,15 +41,18 @@ void main() {
       );
       await tester.pumpAndSettle();
       for (final label in [
-        'Hold 2 seconds to send SOS',
+        'Tap to confirm • Hold for 2s to send now',
         'No reports nearby',
         'Report',
         'Vacation watch',
         'Emergency',
         'Police',
       ]) {
-        await tester.ensureVisible(find.text(label));
-        await tester.tap(find.text(label));
+        // Shortcut labels also appear in an invisible copy used for sizing;
+        // the real, tappable tile is built last.
+        final target = find.text(label).last;
+        await tester.ensureVisible(target);
+        await tester.tap(target);
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       }

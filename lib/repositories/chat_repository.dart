@@ -212,14 +212,35 @@ class ChatRepository {
     }, SetOptions(merge: true));
   }
 
+  /// Saves only the appearance fields that are given.
   Future<void> updateChatAppearance({
     required String chatRoomId,
-    required String backgroundKey,
-    required String bubbleThemeKey,
+    String? backgroundKey,
+    String? bubbleThemeKey,
+    int? accentColor,
+    bool clearAccentColor = false,
+    String? bubbleStyle,
+    String? textSize,
   }) {
     return _firestore.collection('chat_rooms').doc(chatRoomId).set({
-      'backgroundKey': backgroundKey,
-      'bubbleThemeKey': bubbleThemeKey,
+      'backgroundKey': ?backgroundKey,
+      'bubbleThemeKey': ?bubbleThemeKey,
+      if (accentColor != null || clearAccentColor) 'accentColor': accentColor,
+      'bubbleStyle': ?bubbleStyle,
+      'textSize': ?textSize,
+    }, SetOptions(merge: true));
+  }
+
+  /// Keeps the chat at the top of [userId]'s chat list, or stops doing so.
+  Future<void> setPinned({
+    required String chatRoomId,
+    required String userId,
+    required bool pinned,
+  }) {
+    return _firestore.collection('chat_rooms').doc(chatRoomId).set({
+      'pinnedBy': pinned
+          ? FieldValue.arrayUnion([userId])
+          : FieldValue.arrayRemove([userId]),
     }, SetOptions(merge: true));
   }
 

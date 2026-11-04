@@ -26,6 +26,7 @@ class CommunityPost {
     required this.createdAt,
     required this.likes,
     this.category = PostCategory.general,
+    List<PostCategory>? categories,
     this.severity = PostSeverity.low,
     this.mediaUrls = const [],
     this.latitude,
@@ -35,7 +36,7 @@ class CommunityPost {
     this.flags = 0,
     this.likedBy = const [],
     this.flaggedBy = const [],
-  });
+  }) : _categories = categories;
 
   final String id;
   final String authorName;
@@ -43,7 +44,14 @@ class CommunityPost {
   final String content;
   final DateTime createdAt;
   final int likes;
+
+  /// Main category: the first one picked. Used for the icon and colour.
   final PostCategory category;
+
+  final List<PostCategory>? _categories;
+
+  /// Every category picked when reporting (always includes [category]).
+  List<PostCategory> get categories => _categories ?? [category];
   final PostSeverity severity;
   final List<String> mediaUrls;
   final double? latitude;
@@ -68,6 +76,7 @@ class CommunityPost {
         (e) => e.name == data['category'],
         orElse: () => PostCategory.general,
       ),
+      categories: _parseCategories(data),
       severity: PostSeverity.values.firstWhere(
         (e) => e.name == data['severity'],
         orElse: () => PostSeverity.low,
@@ -91,6 +100,7 @@ class CommunityPost {
       'createdAt': Timestamp.fromDate(createdAt),
       'likes': likes,
       'category': category.name,
+      'categories': [for (final c in categories) c.name],
       'severity': severity.name,
       'mediaUrls': mediaUrls,
       'latitude': latitude,
@@ -101,6 +111,20 @@ class CommunityPost {
       'likedBy': likedBy,
       'flaggedBy': flaggedBy,
     };
+  }
+
+  /// "Theft, Assault" for posts with several categories.
+  String get categoriesLabel => categories.map((c) => c.label).join(', ');
+
+  static List<PostCategory>? _parseCategories(Map<String, dynamic> data) {
+    final raw = data['categories'];
+    if (raw is! List) return null;
+    final parsed = [
+      for (final name in raw)
+        for (final c in PostCategory.values)
+          if (c.name == name) c,
+    ];
+    return parsed.isEmpty ? null : parsed;
   }
 
   bool isLikedBy(String userId) =>

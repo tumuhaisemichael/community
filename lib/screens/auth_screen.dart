@@ -119,7 +119,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         'Community',
                         style: textTheme.headlineMedium?.copyWith(
                           color: Colors.white,
-                          fontSize: 34,
+                          fontSize: 27,
                         ),
                       ),
                       const SizedBox(height: 6),

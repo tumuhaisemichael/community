@@ -181,57 +181,57 @@ class AppTheme {
   static TextTheme get _textTheme {
     final base = TextTheme(
       displayLarge: TextStyle(
-        fontSize: 34,
+        fontSize: 28,
         fontWeight: FontWeight.w600,
         color: AppColors.ink,
         letterSpacing: -0.5,
       ),
       headlineMedium: TextStyle(
-        fontSize: 28,
+        fontSize: 22,
         fontWeight: FontWeight.w600,
         color: AppColors.ink,
-        letterSpacing: -0.8,
+        letterSpacing: -0.6,
       ),
       titleLarge: TextStyle(
-        fontSize: 21,
+        fontSize: 18,
         fontWeight: FontWeight.w700,
         color: AppColors.ink,
         letterSpacing: -.5,
       ),
       titleSmall: TextStyle(
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: FontWeight.w600,
         color: AppColors.ink,
       ),
       bodySmall: TextStyle(
-        fontSize: 13,
+        fontSize: 12,
         color: AppColors.mutedText,
-        height: 1.45,
+        height: 1.4,
       ),
       titleMedium: TextStyle(
-        fontSize: 17,
+        fontSize: 15,
         fontWeight: FontWeight.w600,
         color: AppColors.ink,
       ),
       bodyLarge: TextStyle(
-        fontSize: 16,
+        fontSize: 14.5,
         fontWeight: FontWeight.w400,
         color: AppColors.ink,
         height: 1.4,
       ),
       bodyMedium: TextStyle(
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: FontWeight.w400,
         color: AppColors.mutedText,
         height: 1.4,
       ),
       labelLarge: TextStyle(
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.2,
       ),
       labelSmall: TextStyle(
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.w500,
         color: AppColors.mutedText,
         letterSpacing: 0.3,
@@ -243,7 +243,7 @@ class AppTheme {
       headlineMedium: _display(base.headlineMedium!),
       headlineSmall: _display(
         TextStyle(
-          fontSize: 24,
+          fontSize: 20,
           fontWeight: FontWeight.w700,
           color: AppColors.ink,
           letterSpacing: -.5,
@@ -286,7 +286,7 @@ class AppTheme {
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.canvas,
-        toolbarHeight: 72,
+        toolbarHeight: 58,
         centerTitle: false,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -306,8 +306,8 @@ class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.onPrimary,
-          minimumSize: const Size(0, 52),
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -325,7 +325,7 @@ class AppTheme {
         backgroundColor: AppColors.card,
         surfaceTintColor: Colors.transparent,
         indicatorColor: AppColors.watchDim,
-        height: 76,
+        height: 66,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => textTheme.labelSmall?.copyWith(
             color: states.contains(WidgetState.selected)
@@ -349,7 +349,7 @@ class AppTheme {
       listTileTheme: ListTileThemeData(
         iconColor: AppColors.watch,
         textColor: AppColors.ink,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         titleTextStyle: textTheme.titleSmall,
         subtitleTextStyle: textTheme.bodyMedium,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -360,7 +360,7 @@ class AppTheme {
         checkmarkColor: AppColors.primary,
         side: BorderSide(color: AppColors.border),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         labelStyle: textTheme.labelSmall?.copyWith(color: AppColors.ink),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -394,7 +394,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.onPrimary,
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size.fromHeight(44),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -405,7 +405,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.ink,
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size.fromHeight(44),
           side: BorderSide(color: AppColors.border, width: 1.4),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -423,8 +423,8 @@ class AppTheme {
         filled: true,
         fillColor: AppColors.card,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
+          horizontal: 14,
+          vertical: 12,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),

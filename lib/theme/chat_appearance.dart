@@ -17,6 +17,15 @@ class ChatBackgroundPreset {
 
   List<Color> get currentColors => AppColors.isDark ? darkColors : colors;
 
+  /// The chat screen always uses the light versions of the backgrounds.
+  BoxDecoration chatDecoration() => BoxDecoration(
+    gradient: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: colors,
+    ),
+  );
+
   BoxDecoration decoration() {
     return BoxDecoration(
       gradient: LinearGradient(
@@ -44,6 +53,30 @@ class ChatBubblePreset {
   final Color otherColor;
   final Color selfTextColor;
   final Color otherTextColor;
+
+  /// Violet gradient for your own messages with the default theme.
+  bool get usesGradient => key == 'community';
+}
+
+/// Colours for the chat screen (header, composer and other chrome).
+class ChatTone {
+  ChatTone._();
+
+  static const Color header = Colors.white;
+  static const Color composer = Colors.white;
+  static const Color field = Color(0xFFF3F0FB);
+  static const Color otherBubble = Color(0xFFF1EEFA);
+  static const Color otherBorder = Color(0xFFE6E1F3);
+  static const Color chip = Color(0xFFEFEBFA);
+  static const Color text = Color(0xFF1E1240);
+  static const Color muted = Color(0xFF6B6485);
+  static const Color accent = Color(0xFF6D28D9);
+  static const Color avatar = Color(0xFFEDE6FD);
+  static const Color online = Color(0xFF22C55E);
+  static const List<Color> selfGradient = [
+    Color(0xFF7C3AED),
+    Color(0xFF6D28D9),
+  ];
 }
 
 class ChatAppearanceCatalog {
@@ -51,8 +84,8 @@ class ChatAppearanceCatalog {
     ChatBackgroundPreset(
       key: 'linen',
       label: 'Classic',
-      colors: [Color(0xFFF3F4F8), Color(0xFFEBEDF4)],
-      darkColors: [Color(0xFF0C0F1E), Color(0xFF10142A)],
+      colors: [Color(0xFFFCFBFF), Color(0xFFF6F3FD)],
+      darkColors: [Color(0xFF17152E), Color(0xFF0F0D20)],
     ),
     ChatBackgroundPreset(
       key: 'mint',
@@ -113,6 +146,24 @@ class ChatAppearanceCatalog {
     return backgrounds.firstWhere(
       (background) => background.key == key,
       orElse: () => backgrounds.first,
+    );
+  }
+
+  /// Bubble colours for the chat screen. The default theme uses a violet
+  /// gradient for your messages and soft lavender for theirs.
+  static ChatBubblePreset chatBubbleByKey(String key) {
+    final preset = bubbleThemes.firstWhere(
+      (theme) => theme.key == key,
+      orElse: () => bubbleThemes.first,
+    );
+    if (preset.key != 'community') return preset;
+    return ChatBubblePreset(
+      key: preset.key,
+      label: preset.label,
+      selfColor: ChatTone.selfGradient.last,
+      otherColor: ChatTone.otherBubble,
+      selfTextColor: Colors.white,
+      otherTextColor: ChatTone.text,
     );
   }
 

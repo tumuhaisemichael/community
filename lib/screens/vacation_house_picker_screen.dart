@@ -72,8 +72,10 @@ class _VacationHousePickerScreenState extends State<VacationHousePickerScreen> {
                     markers: [
                       Marker(
                         point: selectedLocation,
-                        width: 120,
+                        width: 140,
                         height: 72,
+                        // Pin tip on the tapped spot, not the pin's middle.
+                        alignment: Alignment.topCenter,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -93,7 +95,9 @@ class _VacationHousePickerScreenState extends State<VacationHousePickerScreen> {
                                   ),
                                 ],
                               ),
-                              child: const Text('House location'),
+                              child: const FittedBox(
+                                child: Text('House location', maxLines: 1),
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Icon(

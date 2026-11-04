@@ -63,13 +63,13 @@ class SplashScreen extends StatelessWidget {
                 'Community',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: Colors.white,
-                  fontSize: 38,
+                  fontSize: 30,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Neighbours looking out for each other.',
-                style: TextStyle(color: AppColors.heroMuted, fontSize: 15),
+                style: TextStyle(color: AppColors.heroMuted, fontSize: 13.5),
               ),
             ],
           ),
