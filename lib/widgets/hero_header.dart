@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme/home_tone.dart';
 
-/// Violet page header shared by the Home and Map tabs: brand, notifications,
-/// avatar, a title and a subtitle over a small skyline illustration.
-///
-/// [bottom] is laid along the lower edge on a canvas-coloured sheet with
-/// rounded top corners (the Map tab puts its filter chips there).
+/// Header for the Home and Map tabs: the shared violet header (no back
+/// button) with the bulletin bell and your profile as round buttons.
 class HeroHeader extends StatelessWidget {
   const HeroHeader({
     super.key,
@@ -17,7 +14,6 @@ class HeroHeader extends StatelessWidget {
     required this.onOpenBulletin,
     required this.onOpenMe,
     this.bottom,
-    this.bottomSpace = 48,
   });
 
   final String title;
@@ -30,151 +26,24 @@ class HeroHeader extends StatelessWidget {
   final VoidCallback onOpenMe;
   final Widget? bottom;
 
-  /// Space below the subtitle, before [bottom].
-  final double bottomSpace;
-
   @override
-  Widget build(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
-    final textTheme = Theme.of(context).textTheme;
-
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: HomeTone.headerGradient,
-        ),
+  Widget build(BuildContext context) => PageHeroHeader(
+    title: title,
+    subtitle: subtitle,
+    showBack: false,
+    bottom: bottom,
+    actions: [
+      HeaderRoundButton(
+        icon: Icons.notifications_none_rounded,
+        tooltip: hasAlerts
+            ? 'Community bulletin, urgent reports nearby'
+            : 'Community bulletin',
+        showDot: hasAlerts,
+        onPressed: onOpenBulletin,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Stack(
-            children: [
-              Positioned(
-                right: 0,
-                bottom: bottom == null ? 18 : 0,
-                child: const IgnorePointer(
-                  child: CustomPaint(
-                    size: Size(220, 110),
-                    painter: _HousesPainter(),
-                  ),
-                ),
-              ),
-              Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 640),
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(20, top + 10, 16, bottomSpace),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white.withValues(alpha: .2),
-                              ),
-                              child: const Icon(
-                                Icons.home_rounded,
-                                color: Colors.white,
-                                size: 26,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Community',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: textTheme.titleLarge?.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 18.5,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: hasAlerts
-                                  ? 'Community bulletin, urgent reports nearby'
-                                  : 'Community bulletin',
-                              onPressed: onOpenBulletin,
-                              icon: Badge(
-                                isLabelVisible: hasAlerts,
-                                smallSize: 10,
-                                backgroundColor: HomeTone.red,
-                                child: const Icon(
-                                  Icons.notifications_none_rounded,
-                                  color: Colors.white,
-                                  size: 30,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Semantics(
-                              button: true,
-                              label: 'Open profile',
-                              excludeSemantics: true,
-                              child: InkWell(
-                                onTap: onOpenMe,
-                                customBorder: const CircleBorder(),
-                                child: CircleAvatar(
-                                  radius: 24,
-                                  backgroundColor: Colors.white,
-                                  child: Text(
-                                    initial,
-                                    style: TextStyle(
-                                      color: HomeTone.actionGradient.last,
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 17,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          title,
-                          style: textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: textTheme.bodyLarge?.copyWith(
-                            color: Colors.white.withValues(alpha: .88),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (bottom != null)
-            // Clipped so content scrolling sideways (the Map filter chips)
-            // disappears at the rounded edge instead of spilling over.
-            Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: const BoxDecoration(
-                color: HomeTone.canvas,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              child: bottom,
-            ),
-        ],
-      ),
-    );
-  }
+      HeaderAvatarButton(initial: initial, onPressed: onOpenMe),
+    ],
+  );
 }
 
 /// Violet header for a pushed page: back button, title, subtitle and the
@@ -189,6 +58,9 @@ class PageHeroHeader extends StatelessWidget {
     this.badge,
     this.overlap = 28,
     this.bottom,
+    this.actions = const [],
+    this.below,
+    this.showBack = true,
   });
 
   final String title;
@@ -199,6 +71,16 @@ class PageHeroHeader extends StatelessWidget {
   /// Laid along the lower edge on a canvas-coloured sheet with rounded top
   /// corners (such as tabs). When set, [overlap] is not used.
   final Widget? bottom;
+
+  /// Buttons at the right of the title row, usually [HeaderRoundButton]s.
+  /// When given, they take the place of [badge].
+  final List<Widget> actions;
+
+  /// An extra row under the subtitle, such as an area or filter pill.
+  final Widget? below;
+
+  /// False for main tabs (Messages, Me), which have nowhere to go back to.
+  final bool showBack;
 
   @override
   Widget build(BuildContext context) {
@@ -225,51 +107,73 @@ class PageHeroHeader extends StatelessWidget {
               ),
             ),
           ),
-          if (badge != null)
+          if (badge != null && actions.isEmpty)
             Positioned(right: 36, top: top + 18, child: badge!),
-          Padding(
-            padding: EdgeInsets.fromLTRB(8, top + 6, 20, space + 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          // Centred and at most 640 wide, so tablets look right.
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(8, top + 6, 20, space + 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      tooltip: 'Back',
-                      onPressed: () => Navigator.maybePop(context),
-                      icon: const Icon(
-                        Icons.arrow_back_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
+                    Row(
+                      children: [
+                        if (showBack)
+                          IconButton(
+                            tooltip: 'Back',
+                            onPressed: () => Navigator.maybePop(context),
+                            icon: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 8, height: 48),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontSize: 21,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        if (actions.isNotEmpty)
+                          for (final action in actions) ...[
+                            const SizedBox(width: 8),
+                            action,
+                          ]
+                        else if (badge != null)
+                          const SizedBox(width: 72),
+                      ],
                     ),
-                    const SizedBox(width: 4),
-                    Expanded(
+                    const SizedBox(height: 4),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12),
                       child: Text(
-                        title,
-                        style: textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                          fontSize: 21,
-                          fontWeight: FontWeight.w800,
+                        subtitle,
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: .9),
+                          fontSize: 13.5,
+                          height: 1.45,
                         ),
                       ),
                     ),
-                    if (badge != null) const SizedBox(width: 72),
+                    if (below != null) ...[
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 12),
+                        child: below,
+                      ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 4),
-                Padding(
-                  padding: const EdgeInsets.only(left: 12),
-                  child: Text(
-                    subtitle,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: .9),
-                      fontSize: 13.5,
-                      height: 1.45,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],
@@ -302,8 +206,137 @@ class PageHeroHeader extends StatelessWidget {
   }
 }
 
-/// Violet header for a main tab: large title, subtitle, square action
-/// buttons on the right, and an optional [bottom] on a rounded white sheet.
+/// Round white button with a violet icon, for [PageHeroHeader.actions].
+class HeaderRoundButton extends StatelessWidget {
+  const HeaderRoundButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    this.showDot = false,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  /// Red dot on the icon, e.g. for unseen urgent updates.
+  final bool showDot;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.white.withValues(alpha: .92),
+    shape: const CircleBorder(),
+    child: IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: Badge(
+        isLabelVisible: showDot,
+        smallSize: 9,
+        backgroundColor: HomeTone.red,
+        child: Icon(icon, color: HomeTone.actionGradient.last),
+      ),
+    ),
+  );
+}
+
+/// Round white button with the user's initial, opening their profile.
+class HeaderAvatarButton extends StatelessWidget {
+  const HeaderAvatarButton({
+    super.key,
+    required this.initial,
+    required this.onPressed,
+  });
+
+  final String initial;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: 'Open profile',
+    excludeSemantics: true,
+    child: Material(
+      color: Colors.white,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: SizedBox.square(
+          dimension: 48,
+          child: Center(
+            child: Text(
+              initial,
+              style: TextStyle(
+                color: HomeTone.actionGradient.last,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// White pill under a header's subtitle (icon, label, optional ▾).
+class HeaderPill extends StatelessWidget {
+  const HeaderPill({
+    super.key,
+    required this.icon,
+    required this.label,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+
+  /// When given, the pill shows ▾ and can be tapped.
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.white,
+    shape: const StadiumBorder(),
+    child: InkWell(
+      customBorder: const StadiumBorder(),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: HomeTone.violet, size: 20),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: HomeTone.ink,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: HomeTone.ink,
+              ),
+            ],
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Header for a main tab (Messages, Me): the same violet header as every
+/// other page, without a back button.
 class TabHeroHeader extends StatelessWidget {
   const TabHeroHeader({
     super.key,
@@ -319,87 +352,16 @@ class TabHeroHeader extends StatelessWidget {
   final Widget? bottom;
 
   @override
-  Widget build(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: HomeTone.headerGradient,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Stack(
-            children: [
-              const Positioned(
-                right: 0,
-                bottom: 0,
-                child: IgnorePointer(
-                  child: CustomPaint(
-                    size: Size(200, 96),
-                    painter: _HousesPainter(),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(20, top + 14, 16, 26),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Semantics(
-                            header: true,
-                            child: Text(
-                              title,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: .9),
-                              fontSize: 13.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    for (final action in actions) ...[
-                      const SizedBox(width: 10),
-                      action,
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (bottom != null)
-            Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: const BoxDecoration(
-                color: HomeTone.canvas,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              child: bottom,
-            ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => PageHeroHeader(
+    title: title,
+    subtitle: subtitle,
+    actions: actions,
+    bottom: bottom,
+    showBack: false,
+  );
 }
 
-/// Square white button with a violet icon, for [TabHeroHeader.actions].
+/// Kept for older call sites: the same round button as every header.
 class HeaderSquareButton extends StatelessWidget {
   const HeaderSquareButton({
     super.key,
@@ -413,22 +375,8 @@ class HeaderSquareButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: tooltip,
-    child: Material(
-      color: Colors.white.withValues(alpha: .92),
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(14),
-        child: SizedBox(
-          width: 46,
-          height: 46,
-          child: Icon(icon, color: HomeTone.actionGradient.last, size: 24),
-        ),
-      ),
-    ),
-  );
+  Widget build(BuildContext context) =>
+      HeaderRoundButton(icon: icon, tooltip: tooltip, onPressed: onPressed);
 }
 
 /// Decorative skyline of houses and trees for the header.

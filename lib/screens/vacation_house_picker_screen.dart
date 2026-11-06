@@ -9,10 +9,16 @@ class VacationHousePickerScreen extends StatefulWidget {
   const VacationHousePickerScreen({
     super.key,
     required this.initialCenter,
+    this.title = 'Pin your home',
+    this.pinLabel = 'House location',
     this.initialSelection,
   });
 
   final LatLng initialCenter;
+
+  /// Screen title and the label above the pin (reused for shops).
+  final String title;
+  final String pinLabel;
   final LatLng? initialSelection;
 
   @override
@@ -40,7 +46,7 @@ class _VacationHousePickerScreenState extends State<VacationHousePickerScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pin your home'),
+        title: Text(widget.title),
         actions: [
           TextButton(
             onPressed: selectedLocation == null
@@ -95,8 +101,8 @@ class _VacationHousePickerScreenState extends State<VacationHousePickerScreen> {
                                   ),
                                 ],
                               ),
-                              child: const FittedBox(
-                                child: Text('House location', maxLines: 1),
+                              child: FittedBox(
+                                child: Text(widget.pinLabel, maxLines: 1),
                               ),
                             ),
                             const SizedBox(height: 4),

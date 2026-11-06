@@ -19,6 +19,7 @@ class HomeOverview extends StatelessWidget {
     required this.onSosTriggered,
     required this.onReport,
     required this.onVacation,
+    this.onMarketplace,
     required this.onEmergency,
     required this.onPolice,
     required this.onOpenMap,
@@ -30,6 +31,9 @@ class HomeOverview extends StatelessWidget {
   final VoidCallback onSosTriggered;
   final VoidCallback onReport;
   final VoidCallback onVacation;
+
+  /// Opens the Marketplace; the shortcut is hidden when null.
+  final VoidCallback? onMarketplace;
   final VoidCallback onEmergency;
   final VoidCallback onPolice;
   final VoidCallback onOpenMap;
@@ -72,6 +76,14 @@ class HomeOverview extends StatelessWidget {
                 tint: HomeTone.violetDim,
                 onTap: onVacation,
               ),
+              if (onMarketplace != null)
+                _Shortcut(
+                  icon: Icons.storefront_rounded,
+                  label: 'Market place',
+                  color: HomeTone.orange,
+                  tint: const Color(0xFFFFEDE2),
+                  onTap: onMarketplace!,
+                ),
               _Shortcut(
                 icon: Icons.phone_in_talk_rounded,
                 label: 'Emergency',
@@ -104,6 +116,10 @@ class _ShortcutRow extends StatefulWidget {
 
   static const Duration interval = Duration(seconds: 5);
   static const double gap = 10;
+
+  /// Tiles keep the size they have when four fit across the screen; any
+  /// more are reached by scrolling the row sideways.
+  static const int visibleTiles = 4;
 
   @override
   State<_ShortcutRow> createState() => _ShortcutRowState();
@@ -157,8 +173,10 @@ class _ShortcutRowState extends State<_ShortcutRow> {
     final count = widget.tiles.length;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = (constraints.maxWidth - gap * (count - 1)) / count;
-        return Stack(
+        const across = _ShortcutRow.visibleTiles;
+        final width = (constraints.maxWidth - gap * (across - 1)) / across;
+        final total = count * width + (count - 1) * gap;
+        final row = Stack(
           children: [
             // Invisible copy that gives the row its height, so the tiles can
             // grow with large text.
@@ -173,7 +191,7 @@ class _ShortcutRowState extends State<_ShortcutRow> {
                   children: [
                     for (var i = 0; i < count; i++) ...[
                       if (i > 0) const SizedBox(width: gap),
-                      Expanded(child: widget.tiles[i]),
+                      SizedBox(width: width, child: widget.tiles[i]),
                     ],
                   ],
                 ),
@@ -191,6 +209,14 @@ class _ShortcutRowState extends State<_ShortcutRow> {
                 child: widget.tiles[i],
               ),
           ],
+        );
+        if (count <= across) return row;
+        // Scroll sideways to reach the extra tiles; clipBehavior none so
+        // the tiles' shadows are not cut off.
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
+          child: SizedBox(width: total, child: row),
         );
       },
     );

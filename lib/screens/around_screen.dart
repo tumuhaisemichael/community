@@ -431,7 +431,6 @@ class _AroundScreenState extends State<AroundScreen> {
                   hasAlerts: recent.any((p) => p.severity.isSerious),
                   onOpenBulletin: widget.onOpenBulletin,
                   onOpenMe: widget.onOpenMe,
-                  bottomSpace: 20,
                   bottom: _FilterBar(
                     selected: _filter,
                     onSelect: (filter) => setState(() => _filter = filter),

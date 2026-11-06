@@ -186,16 +186,16 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: HomeTone.canvas,
-        body: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            OverlapHeader(
-              overlap: 28,
-              header: const PageHeroHeader(
-                title: 'Chat Settings',
-                subtitle: 'Personalize your chat experience.',
-              ),
-              child: Padding(
+        body: PinnedHeader(
+          overlap: 28,
+          header: const PageHeroHeader(
+            title: 'Chat Settings',
+            subtitle: 'Personalize your chat experience.',
+          ),
+          body: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -209,8 +209,8 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

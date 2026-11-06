@@ -75,20 +75,20 @@ class _StatisticsDashboardScreenState extends State<StatisticsDashboardScreen> {
             final byType = counts.entries.toList()
               ..sort((a, b) => b.value.compareTo(a.value));
 
-            return ListView(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.paddingOf(context).bottom + 24,
+            return PinnedHeader(
+              overlap: 28,
+              header: const PageHeroHeader(
+                title: 'Crime Stats',
+                subtitle:
+                    'Incidents reported by the community. General updates '
+                    'are not counted.',
               ),
-              children: [
-                OverlapHeader(
-                  overlap: 28,
-                  header: const PageHeroHeader(
-                    title: 'Crime Stats',
-                    subtitle:
-                        'Incidents reported by the community. General updates '
-                        'are not counted.',
-                  ),
-                  child: Padding(
+              body: ListView(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.paddingOf(context).bottom + 24,
+                ),
+                children: [
+                  Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -180,8 +180,8 @@ class _StatisticsDashboardScreenState extends State<StatisticsDashboardScreen> {
                       ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         ),

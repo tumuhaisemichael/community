@@ -132,17 +132,17 @@ class _VacationWatchDashboardScreenState
             orElse: () => trips.first,
           );
 
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        OverlapHeader(
-          overlap: 40,
-          header: const PageHeroHeader(
-            title: 'Trip Dashboard',
-            subtitle: 'How your trips are being covered',
-            overlap: 40,
-          ),
-          child: Padding(
+    return PinnedHeader(
+      overlap: 28,
+      header: const PageHeroHeader(
+        title: 'Trip Dashboard',
+        subtitle: 'How your trips are being covered',
+        overlap: 28,
+      ),
+      body: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -249,8 +249,8 @@ class _VacationWatchDashboardScreenState
               ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

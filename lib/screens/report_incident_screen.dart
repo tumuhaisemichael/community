@@ -181,26 +181,20 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
         backgroundColor: HomeTone.canvas,
         body: Form(
           key: _formKey,
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              OverlapHeader(
-                overlap: 28,
-                header: const PageHeroHeader(
-                  title: 'Report an Incident',
-                  subtitle:
-                      'Tell your neighbours what happened.\n'
-                      'Reports are shared with the community feed and map.',
-                  badge: _AlertShield(),
-                ),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: HomeTone.canvas,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(28),
-                    ),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+          child: PinnedHeader(
+            overlap: 28,
+            header: const PageHeroHeader(
+              title: 'Report an Incident',
+              subtitle:
+                  'Tell your neighbours what happened.\n'
+                  'Reports are shared with the community feed and map.',
+              badge: _AlertShield(),
+            ),
+            body: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 640),
@@ -208,8 +202,8 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         bottomNavigationBar: Padding(

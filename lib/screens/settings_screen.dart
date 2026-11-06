@@ -359,19 +359,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         color: HomeTone.canvas,
         child: ListenableBuilder(
           listenable: UiPreferences.instance,
-          builder: (context, _) => ListView(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.paddingOf(context).bottom + 16,
+          builder: (context, _) => PinnedHeader(
+            overlap: 28,
+            header: const TabHeroHeader(
+              title: 'Me',
+              subtitle:
+                  'Manage your account, safety tools, and app preferences.',
             ),
-            children: [
-              OverlapHeader(
-                overlap: 16,
-                header: const TabHeroHeader(
-                  title: 'Me',
-                  subtitle:
-                      'Manage your account, safety tools, and app preferences.',
-                ),
-                child: Padding(
+            body: ListView(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.paddingOf(context).bottom + 16,
+              ),
+              children: [
+                Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -394,8 +394,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

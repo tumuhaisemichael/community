@@ -10,6 +10,7 @@ import 'package:community/screens/community_bulletin_screen.dart';
 import 'package:community/screens/more_info_screen.dart';
 import 'package:community/screens/settings_screen.dart';
 import 'package:community/screens/vacation_watch_screen.dart';
+import 'package:community/screens/marketplace_screen.dart';
 import 'package:community/screens/neighbor_directory_screen.dart';
 import 'package:community/screens/emergency_contacts_screen.dart';
 import 'package:community/screens/police_locator_screen.dart';
@@ -224,6 +225,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openMarketplace() => _openScreen(
+    MarketplaceScreen(
+      authService: widget.authService,
+      chatRepository: _chatRepository,
+      currentLocation: _currentLocation,
+    ),
+  );
+
   void _openBulletin() => _openScreen(
     CommunityBulletinScreen(
       authService: widget.authService,
@@ -247,6 +256,12 @@ class _HomeScreenState extends State<HomeScreen> {
       subtitle: 'Neighbours keep an eye on your home',
       onTap: () =>
           _openScreen(VacationWatchScreen(authService: widget.authService)),
+    ),
+    SettingsTool(
+      icon: Icons.storefront_outlined,
+      title: 'Market place',
+      subtitle: 'Shop from local neighbours',
+      onTap: _openMarketplace,
     ),
     SettingsTool(
       icon: Icons.campaign_outlined,
@@ -317,6 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onOpenMe: () => _selectTab(_Tab.me),
           onVacation: () =>
               _openScreen(VacationWatchScreen(authService: widget.authService)),
+          onMarketplace: _openMarketplace,
           onEmergency: () =>
               _openScreen(EmergencyContactsScreen(onSos: _confirmSos)),
           onPolice: () => _openScreen(
@@ -415,6 +431,7 @@ class _HomeTab extends StatelessWidget {
     required this.onOpenMap,
     required this.onOpenMe,
     required this.onVacation,
+    required this.onMarketplace,
     required this.onEmergency,
     required this.onPolice,
   });
@@ -432,6 +449,7 @@ class _HomeTab extends StatelessWidget {
   final VoidCallback onOpenMap;
   final VoidCallback onOpenMe;
   final VoidCallback onVacation;
+  final VoidCallback onMarketplace;
   final VoidCallback onEmergency;
   final VoidCallback onPolice;
 
@@ -469,74 +487,67 @@ class _HomeTab extends StatelessWidget {
             currentLocation,
           ).any((p) => p.severity.isSerious);
 
-          return ListView(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.paddingOf(context).bottom,
+          return PinnedHeader(
+            overlap: 28,
+            header: HeroHeader(
+              title: '$_greeting, $name 👋',
+              subtitle: 'Your neighbourhood at a glance',
+              initial: name.isEmpty ? '?' : name[0].toUpperCase(),
+              hasAlerts: hasAlerts,
+              onOpenBulletin: onOpenBulletin,
+              onOpenMe: onOpenMe,
             ),
-            children: [
-              OverlapHeader(
-                overlap: 28,
-                header: HeroHeader(
-                  title: '$_greeting, $name 👋',
-                  subtitle: 'Your neighbourhood at a glance',
-                  initial: name.isEmpty ? '?' : name[0].toUpperCase(),
-                  hasAlerts: hasAlerts,
-                  onOpenBulletin: onOpenBulletin,
-                  onOpenMe: onOpenMe,
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: HomeTone.canvas,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(28),
-                    ),
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 640),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            HomeOverview(
+            body: ListView(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.paddingOf(context).bottom,
+              ),
+              children: [
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 640),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          HomeOverview(
+                            posts: posts,
+                            currentLocation: currentLocation,
+                            onSosTap: onSosTap,
+                            onSosTriggered: onSosTriggered,
+                            onReport: onReport,
+                            onVacation: onVacation,
+                            onMarketplace: onMarketplace,
+                            onEmergency: onEmergency,
+                            onPolice: onPolice,
+                            onOpenMap: onOpenMap,
+                          ),
+                          if (!isLoadingLocation && locationError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 14),
+                              child: LocationNotice(
+                                message: locationError!,
+                                onRetry: onRetryLocation,
+                              ),
+                            ),
+                          const SizedBox(height: 14),
+                          Reveal(
+                            order: 3,
+                            child: _UpdatesCard(
                               posts: posts,
-                              currentLocation: currentLocation,
-                              onSosTap: onSosTap,
-                              onSosTriggered: onSosTriggered,
+                              loading: loading,
+                              hasError: snapshot.hasError,
+                              onOpenBulletin: onOpenBulletin,
                               onReport: onReport,
-                              onVacation: onVacation,
-                              onEmergency: onEmergency,
-                              onPolice: onPolice,
-                              onOpenMap: onOpenMap,
                             ),
-                            if (!isLoadingLocation && locationError != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 14),
-                                child: LocationNotice(
-                                  message: locationError!,
-                                  onRetry: onRetryLocation,
-                                ),
-                              ),
-                            const SizedBox(height: 14),
-                            Reveal(
-                              order: 3,
-                              child: _UpdatesCard(
-                                posts: posts,
-                                loading: loading,
-                                hasError: snapshot.hasError,
-                                onOpenBulletin: onOpenBulletin,
-                                onReport: onReport,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

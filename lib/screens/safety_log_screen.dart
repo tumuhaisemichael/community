@@ -74,21 +74,21 @@ class _SafetyLogScreenState extends State<SafetyLogScreen> {
               ],
             };
 
-            return ListView(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.paddingOf(context).bottom + 24,
+            return PinnedHeader(
+              overlap: 28,
+              header: PageHeroHeader(
+                title: 'My Safety Log',
+                subtitle: snapshot.hasData
+                    ? 'You have reported ${mine.length} '
+                          'incident${mine.length == 1 ? '' : 's'}.'
+                    : 'Incidents you have reported',
               ),
-              children: [
-                OverlapHeader(
-                  overlap: 28,
-                  header: PageHeroHeader(
-                    title: 'My Safety Log',
-                    subtitle: snapshot.hasData
-                        ? 'You have reported ${mine.length} '
-                              'incident${mine.length == 1 ? '' : 's'}.'
-                        : 'Incidents you have reported',
-                  ),
-                  child: Padding(
+              body: ListView(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.paddingOf(context).bottom + 24,
+                ),
+                children: [
+                  Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -176,8 +176,8 @@ class _SafetyLogScreenState extends State<SafetyLogScreen> {
                       ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         ),

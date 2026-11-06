@@ -57,4 +57,47 @@ void main() {
     await tester.pumpAndSettle();
     expect(_x(tester, 'Report'), closeTo(reportX, 1));
   });
+
+  testWidgets('Five shortcuts keep their size and scroll sideways', (
+    tester,
+  ) async {
+    UiPreferences.instance.setMoveShortcuts(false);
+    tester.view.physicalSize = const Size(390, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: HomeOverview(
+              posts: const [],
+              currentLocation: null,
+              onSosTap: () {},
+              onSosTriggered: () {},
+              onReport: () {},
+              onVacation: () {},
+              onMarketplace: () {},
+              onEmergency: () {},
+              onPolice: () {},
+              onOpenMap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Same width as when four fit across: (358 − 3 × 10) / 4 = 82.
+    final tile = tester.getRect(
+      find.byType(InkWell).at(find.byType(InkWell).evaluate().length - 5),
+    );
+    expect(tile.width, closeTo(82, 1));
+
+    // The fifth tile starts off-screen and is reached by swiping.
+    expect(tester.getCenter(find.text('Police').last).dx, greaterThan(390));
+    await tester.drag(find.text('Market place').last, const Offset(-200, 0));
+    await tester.pumpAndSettle();
+    expect(tester.getCenter(find.text('Police').last).dx, lessThan(390));
+  });
 }
