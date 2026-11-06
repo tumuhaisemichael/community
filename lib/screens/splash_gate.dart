@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
-import '../widgets/beacon_mark.dart';
+import 'package:flutter/services.dart';
+
+import '../widgets/auth_scene.dart';
 import '../widgets/community_ui.dart';
 
 import '../repositories/post_repository.dart';
@@ -45,36 +46,61 @@ class _SplashGateState extends State<SplashGate> {
   }
 }
 
+/// Shown while the app starts: the logo on violet (the native launch
+/// screen shows the same, so there's no jump).
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.hero,
-      body: Center(
-        child: Reveal(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              BeaconMark(size: 76, color: AppColors.accent, animate: true),
-              const SizedBox(height: 28),
-              Text(
-                'Community',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: Colors.white,
-                  fontSize: 30,
+  Widget build(BuildContext context) =>
+      const AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light,
+        child: Scaffold(
+          backgroundColor: Color(0xFF7C3AED),
+          body: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF7C3AED),
+                  Color(0xFF8B5CF6),
+                  Color(0xFFB9A2FB),
+                ],
+              ),
+            ),
+            child: SizedBox.expand(
+              child: Center(
+                child: Reveal(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppIcon(size: 140),
+                      SizedBox(height: 8),
+                      Text(
+                        'Community',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -.5,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Connect · Report · Shop · Thrive',
+                        style: TextStyle(
+                          color: Color(0xEBFFFFFF),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Neighbours looking out for each other.',
-                style: TextStyle(color: AppColors.heroMuted, fontSize: 13.5),
-              ),
-            ],
+            ),
           ),
         ),
-      ),
-    );
-  }
+      );
 }

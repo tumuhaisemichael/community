@@ -111,6 +111,7 @@ class PinnedHeader extends StatelessWidget {
     required this.body,
     this.overlap = 28,
     this.sheetColor,
+    this.radius = 28,
   });
 
   final Widget header;
@@ -123,6 +124,9 @@ class PinnedHeader extends StatelessWidget {
   /// background by default), so the rounded edge shows over the header.
   final Color? sheetColor;
 
+  /// Corner radius of the sheet's top edge.
+  final double radius;
+
   /// Space between the sheet's rounded edge and the first item.
   static const double topGap = 16;
 
@@ -131,7 +135,7 @@ class PinnedHeader extends StatelessWidget {
     overlap: overlap,
     header: header,
     body: ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(radius)),
       child: ColoredBox(
         color: sheetColor ?? HomeTone.canvas,
         child: Padding(

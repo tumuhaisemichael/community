@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Behind the logo in the home-screen icon. -->
+    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- Launch screen, matching the app's violet splash. -->
+    <color name="launch_background">#7C3AED</color>
+</resources>
